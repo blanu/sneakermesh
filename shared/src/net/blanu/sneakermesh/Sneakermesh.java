@@ -11,33 +11,31 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.HashSet;
+import java.util.Queue;
 import java.util.Set;
 
 abstract public class Sneakermesh
 {
 	private static final String TAG = "Sneakermesh";
-	
-	private static final int CMD_HAVE=0;
-	private static final int CMD_WANT=1;
-	private static final int CMD_GIVE=2;
-	private static final int CMD_DONE=3;
 
 	private Set<String> have;
 	private Set<String> want;
 	private Set<String> give;
-	private Set<String> wanted;
-	private Set<String> available;
+	
+	private Queue<Message> queue;
+	
 	protected File root;	
 	
 	public Sneakermesh(File f)
 	{
 		root=f;
 		log("root: "+f);
+		GiveMessage.root=f;
+		
         have=new HashSet<String>();
         want=new HashSet<String>();
         give=new HashSet<String>();
-        wanted=new HashSet<String>();
-        available=new HashSet<String>();
+        
         loadHashes();
 	}
 	
@@ -49,6 +47,8 @@ abstract public class Sneakermesh
 		try {
 			DataInputStream is=new DataInputStream(sock.getInputStream());
 			DataOutputStream out = new DataOutputStream(sock.getOutputStream());
+			
+			queue.add(new HaveMessage(have));
 			
 			new ReadSync(is).start();
 			new WriteSync(out).start();
@@ -73,11 +73,14 @@ abstract public class Sneakermesh
 		{
 			try
 			{
-				boolean done=false;
-				while(!done)
+				log("reading command");
+				Message msg=Message.readCommand(is);
+				while(msg!=null)
 				{
+					log("command: "+msg);
 					log("reading command");
-					done=readCommand(is);	    		    	
+					msg=Message.readCommand(is);
+					execute(msg);
 				}			
 			}
 			catch(Exception e)
@@ -86,7 +89,7 @@ abstract public class Sneakermesh
 			}
 		}
 	}
-
+	
 	private class WriteSync extends Thread
 	{
 		DataOutputStream out;
@@ -97,20 +100,26 @@ abstract public class Sneakermesh
 		}
 		
 		public void run()
-		{
-			try
+		{			
+			while(true)
 			{
-				sendHave(out);    
-			
-				if(want.size()>0)
+				try
 				{
-					log("Sending want");
-					sendWant(out);
+					log("writesync");
+
+					Message msg=queue.poll();
+					if(msg!=null)
+					{
+						msg.write(out);
+					}
+					
+					sleep(10000);
 				}
-			}
-			catch(Exception e)
-			{
-				e.printStackTrace();
+				catch(Exception e)
+				{
+					e.printStackTrace();
+					return;
+				}
 			}
 		}
 	}		
@@ -143,130 +152,87 @@ abstract public class Sneakermesh
 			}
 		}
 	}
-
-	public boolean readCommand(DataInputStream is) throws IOException
+	
+	private void execute(Message msg) throws IOException
 	{
-		int peerCmd=is.read();
-		log("readCommand: "+peerCmd);
-
-		switch(peerCmd)
+		if(msg instanceof HaveMessage)
 		{
-		case -1:
-			return true;
-		case CMD_HAVE:
-			readHave(is);
-			break;
-		case CMD_WANT:
-			readWant(is);
-			break;
-		case CMD_GIVE:
-			readGive(is);
-			break;
-		case CMD_DONE:
-			return true;
-		default:
-			log("Unknown command: "+peerCmd);
+			execute((HaveMessage)msg);
 		}
-		
-		return false;
+		else if(msg instanceof WantMessage)
+		{
+			execute((WantMessage)msg);
+		}
+		else if(msg instanceof GiveMessage)
+		{
+			execute((GiveMessage)msg);
+		}
 	}
 
-	public void readHave(DataInputStream is) throws IOException
-	{    		
-		log("readHave");
-		Set<String>peerMsgs=new HashSet<String>();
-		int num=is.read();
-		log("numhave: "+num);
-		for(int x=0; x<num; x++)
+	private void execute(HaveMessage msg)
+	{
+		Set<String> available=new HashSet<String>(msg.have);		
+		
+		synchronized(have)
 		{
-			String digest=readDigest(is);
-			log("Peer has "+digest);
-			peerMsgs.add(digest);
-		}
-
-		synchronized(want)
-		{
-			for(String digest : peerMsgs)
+			synchronized(want)
 			{
-				File f=new File(root, digest);
-				if(!f.exists())
-				{	
-					FileOutputStream out=new FileOutputStream(new File(root, digest));
-					out.close();
-					want.add(digest);
+				available.removeAll(have);
+				want.addAll(available);
+				
+				if(want.size()>0)
+				{
+					synchronized(queue)
+					{
+						queue.add(new WantMessage(new HashSet<String>(want)));
+					}
 				}
 			}
 		}
 	}
 
-	public void readWant(DataInputStream is) throws IOException
+	private void execute(WantMessage msg)
 	{
-		log("readWant");
-		int num=is.read();
-		for(int x=0; x<num; x++)
+		synchronized(have)
 		{
-			String digest=readDigest(is);
-			
-			File file=new File(root, digest);
-			if(!file.exists() && file.length()>0)
+			for(String digest : msg.want)
 			{
-				FileInputStream fis=new FileInputStream(file);
-				long size=file.length();
-//				sendGive(out, digest, size, fis);
-				fis.close();
+				if(have.contains(digest))
+				{
+					synchronized(queue)
+					{
+						try
+						{
+							queue.add(new GiveMessage(digest));
+						}
+						catch(Exception e)
+						{
+							e.printStackTrace();
+						}
+					}
+				}
 			}
-		}    	
-	}
+		}
+	}	
 
-	public void readGive(DataInputStream is) throws IOException
-	{
-		log("readGive");
-		String digest=readDigest(is);
-		long num=is.read();
-		File file=new File(root, digest);
+	private void execute(GiveMessage msg) throws IOException
+	{	
+		File file=new File(root, msg.digest);
 		FileOutputStream out=new FileOutputStream(file);
-		pump(is, out, num);
-		out.close();
-	}
+		pump(msg.stream, out, msg.size);
+		out.close();		
 
-	public void sendHave(DataOutputStream out) throws IOException
-	{
-		log("sendHave");
-		out.write(CMD_HAVE);
-		out.write(have.size());
+		synchronized(want)
+		{
+			want.remove(msg.digest);
+		}
 		
 		synchronized(have)
 		{
-			for(String msg : have)
-			{
-				out.write(msg.getBytes());				
-			}	    	
+			have.add(msg.digest);
 		}
 	}
 
-	public void sendWant(DataOutputStream out) throws IOException
-	{
-		log("sendWant");
-		out.write(CMD_HAVE);
-		out.write(want.size());
-		
-		synchronized(want)
-		{
-			for(String msg : have)
-			{
-				out.write(msg.getBytes());				
-			}	    	
-		}
-	}	
-	
-	public void sendGive(DataOutputStream out, String digest, long size, FileInputStream file) throws IOException
-	{
-		log("sendGive");
-		out.write(digest.getBytes());
-		out.writeLong(size);
-		pump(file, out);
-	}
-	
 	public void addMessage(String msg) throws IOException
 	{
 		String digest=hash(msg);
@@ -275,53 +241,26 @@ abstract public class Sneakermesh
 		out.write(msg.getBytes());
 		out.close();		
 	}
-
-	static public String readDigest(InputStream is)
+	
+	public static String asHex(byte buf[])
 	{
-		byte[] digest=fillBuffer(is, (512/8)*2);
-		return new String(digest);
-	}    
+		StringBuffer strbuf = new StringBuffer(buf.length * 2);
 
-	static public byte[] fillBuffer(InputStream is, int size)
-	{
-		byte[] digest=new byte[size];
-		int offset=0;
-		int count=0;
-		while(count<digest.length)
+		for(int i=0; i< buf.length; i++)
 		{
-			int read;
-			try {
-				read = is.read(digest, offset, digest.length-offset);
-				offset=offset+read;
-				count=count+read;
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			if(((int) buf[i] & 0xff) < 0x10)
+				strbuf.append("0");
+			strbuf.append(Long.toString((int) buf[i] & 0xff, 16));
 		}
-		return digest;
+		return strbuf.toString();
 	}
 
-	static public void pump(InputStream is, OutputStream out)
+	public String hash(String s)
 	{
-		int buffsize=1024;
-		byte[] buff=new byte[buffsize];
-		int count=0;
-		
-		try {
-			int read=is.read(buff, 0, buffsize);
-			while(read!=-1)
-			{	
-				out.write(buff, 0, read);
-				count=count+read;
-				read=is.read(buff, 0, buffsize);
-			}
-		} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-		}
-	}	
-
+		byte[] digest=Skein.hash(s.getBytes());
+		return asHex(digest);
+	}
+	
 	static public void pump(InputStream is, OutputStream out, long maxlen)
 	{
 		int buffsize=1024;
@@ -358,23 +297,4 @@ abstract public class Sneakermesh
 				e.printStackTrace();
 		}
 	}		
-	
-	public static String asHex(byte buf[])
-	{
-		StringBuffer strbuf = new StringBuffer(buf.length * 2);
-
-		for(int i=0; i< buf.length; i++)
-		{
-			if(((int) buf[i] & 0xff) < 0x10)
-				strbuf.append("0");
-			strbuf.append(Long.toString((int) buf[i] & 0xff, 16));
-		}
-		return strbuf.toString();
-	}
-
-	public String hash(String s)
-	{
-		byte[] digest=Skein.hash(s.getBytes());
-		return asHex(digest);
-	}
 }
