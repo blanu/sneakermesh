@@ -1,6 +1,7 @@
-sneakermesh
-android/bin
-laptop/bin
-shared/bin
+sneakermesh/**/*
+android/bin/**/*
+laptop/bin/**/*
+shared/bin/**/*
 .class
-.metadata
+.metadata/**/*
+
