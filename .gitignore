@@ -1,5 +1,4 @@
-sneakermesh
-sneakermesh/**/*
+sneakermesh/*
 android/bin/*
 android/bin/**/*
 laptop/bin/*
