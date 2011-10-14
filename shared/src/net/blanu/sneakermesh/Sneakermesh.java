@@ -3,16 +3,15 @@ package net.blanu.sneakermesh;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.HashSet;
-import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 abstract public class Sneakermesh
 {
@@ -20,9 +19,8 @@ abstract public class Sneakermesh
 
 	private Set<String> have;
 	private Set<String> want;
-	private Set<String> give;
 	
-	private Queue<Message> queue;
+	private BlockingQueue<Message> queue;
 	
 	protected File root;	
 	
@@ -34,7 +32,7 @@ abstract public class Sneakermesh
 		
         have=new HashSet<String>();
         want=new HashSet<String>();
-        give=new HashSet<String>();
+        queue=new LinkedBlockingQueue<Message>();
         
         loadHashes();
 	}
@@ -50,8 +48,24 @@ abstract public class Sneakermesh
 			
 			queue.add(new HaveMessage(have));
 			
-			new ReadSync(is).start();
-			new WriteSync(out).start();
+			Thread reader=new ReadSync(is);
+			reader.start();
+			Thread writer=new WriteSync(out);
+			writer.start();
+			
+			try {
+				reader.join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			try {
+				writer.join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
 			log("done send");			
 		} catch (IOException e) {
@@ -101,25 +115,20 @@ abstract public class Sneakermesh
 		
 		public void run()
 		{			
-			while(true)
+			try
 			{
-				try
+				while(true)
 				{
 					log("writesync");
-
-					Message msg=queue.poll();
-					if(msg!=null)
-					{
-						msg.write(out);
-					}
-					
-					sleep(10000);
+					Message msg=queue.take();
+					log("outgoing message: "+msg);
+					msg.write(out);
 				}
-				catch(Exception e)
-				{
-					e.printStackTrace();
-					return;
-				}
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+				return;
 			}
 		}
 	}		
@@ -182,9 +191,11 @@ abstract public class Sneakermesh
 				
 				if(want.size()>0)
 				{
-					synchronized(queue)
-					{
-						queue.add(new WantMessage(new HashSet<String>(want)));
+					try {
+						queue.put(new WantMessage(new HashSet<String>(want)));
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 				}
 			}
@@ -199,16 +210,13 @@ abstract public class Sneakermesh
 			{
 				if(have.contains(digest))
 				{
-					synchronized(queue)
+					try
 					{
-						try
-						{
-							queue.add(new GiveMessage(digest));
-						}
-						catch(Exception e)
-						{
-							e.printStackTrace();
-						}
+						queue.put(new GiveMessage(digest));
+					}
+					catch(Exception e)
+					{
+						e.printStackTrace();
 					}
 				}
 			}
@@ -240,6 +248,11 @@ abstract public class Sneakermesh
 		FileOutputStream out=new FileOutputStream(file);
 		out.write(msg.getBytes());
 		out.close();		
+		
+		synchronized(have)
+		{
+			have.add(digest);
+		}
 	}
 	
 	public static String asHex(byte buf[])

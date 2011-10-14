@@ -5,11 +5,17 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public abstract class Message {
+public abstract class Message implements Comparable<Message>
+{
 	protected static final int CMD_HAVE=0;
 	protected static final int CMD_WANT=1;
 	protected static final int CMD_GIVE=2;
 	protected static final int CMD_DONE=3;	
+	
+	public int compareTo(Message obj)
+	{
+		return 0;
+	}
 	
 	public static Message readCommand(DataInputStream is) throws IOException
 	{

@@ -20,4 +20,9 @@ public class DoneMessage extends Message {
 	{
 		out.write(CMD_DONE);
 	}
+	
+	public String toString()
+	{
+		return "[Done]";
+	}
 }

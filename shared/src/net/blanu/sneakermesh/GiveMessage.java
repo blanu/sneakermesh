@@ -67,5 +67,10 @@ public class GiveMessage extends Message {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
-	}			
+	}	
+	
+	public String toString()
+	{
+		return "[Give: "+digest+" : "+size+"]";
+	}	
 }

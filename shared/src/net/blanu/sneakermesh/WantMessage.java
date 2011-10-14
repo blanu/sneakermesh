@@ -37,4 +37,9 @@ public class WantMessage extends Message {
 			out.write(msg.getBytes());				
 		}	    	
 	}
+	
+	public String toString()
+	{
+		return "[Want: "+want.size()+"]";
+	}	
 }

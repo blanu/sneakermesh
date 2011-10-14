@@ -37,4 +37,9 @@ public class HaveMessage extends Message {
 			out.write(msg.getBytes());				
 		}	    	
 	}
+	
+	public String toString()
+	{
+		return "[Have: "+have.size()+"]";
+	}
 }
