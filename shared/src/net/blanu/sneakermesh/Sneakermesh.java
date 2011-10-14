@@ -3,12 +3,15 @@ package net.blanu.sneakermesh;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -92,9 +95,9 @@ abstract public class Sneakermesh
 				while(msg!=null)
 				{
 					log("command: "+msg);
+					execute(msg);
 					log("reading command");
 					msg=Message.readCommand(is);
-					execute(msg);
 				}			
 			}
 			catch(Exception e)
@@ -164,6 +167,7 @@ abstract public class Sneakermesh
 	
 	private void execute(Message msg) throws IOException
 	{
+		log("executing msg");
 		if(msg instanceof HaveMessage)
 		{
 			execute((HaveMessage)msg);
@@ -180,18 +184,24 @@ abstract public class Sneakermesh
 
 	private void execute(HaveMessage msg)
 	{
+		log("executing have");
 		Set<String> available=new HashSet<String>(msg.have);		
-		
+
+		log("entering sync");
 		synchronized(have)
 		{
 			synchronized(want)
 			{
+				log("entered sync");
 				available.removeAll(have);
+				log("available: "+available.size());
 				want.addAll(available);
+				log("now want: "+want.size());
 				
 				if(want.size()>0)
 				{
 					try {
+						log("loading queue");
 						queue.put(new WantMessage(new HashSet<String>(want)));
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
@@ -225,6 +235,7 @@ abstract public class Sneakermesh
 
 	private void execute(GiveMessage msg) throws IOException
 	{	
+		log("executing give");
 		File file=new File(root, msg.digest);
 		FileOutputStream out=new FileOutputStream(file);
 		pump(msg.stream, out, msg.size);
@@ -233,11 +244,13 @@ abstract public class Sneakermesh
 		synchronized(want)
 		{
 			want.remove(msg.digest);
+			log("now want: "+want.size());
 		}
 		
 		synchronized(have)
 		{
 			have.add(msg.digest);
+			log("now have: "+have.size());
 		}
 	}
 
@@ -309,5 +322,33 @@ abstract public class Sneakermesh
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
+	}
+
+	public List<String> getMessages() {
+		List<String> msgs=new ArrayList<String>();
+		
+		synchronized(have)
+		{
+			for(String digest : have)
+			{
+				File file=new File(root, digest);
+				long size=file.length();
+				if(file.exists() && size>0)
+				{
+					try
+					{
+						FileInputStream fis=new FileInputStream(file);
+						byte[] contents=Util.fillBuffer(fis, (int)size);
+						msgs.add(new String(contents));
+					}
+					catch(Exception e)
+					{
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		
+		return msgs;
 	}		
 }
