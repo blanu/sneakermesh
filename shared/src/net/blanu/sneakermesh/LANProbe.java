@@ -39,7 +39,7 @@ public class LANProbe extends Thread
     
     public void log(String s)
     {
-    	System.out.println(s);
+    	mesh.log(s);
     }
     
     private String getLocalIpAddress() {

@@ -32,24 +32,13 @@ public class LANProbeService extends Service {
     @Override
     public void onStart(Intent intent, int startId) {
     	log("Started");
-        
-        mesh=new AndroidSneakermesh(this);
-        
-        log("resumed");
-        String ip=getLocalIpAddress();
-        if(ip==null)
-        {
-        	log("null");        	
-        }
-        else
-        {
-        	log("my ip: "+ip);
-        	
-        	if(checkStorage())
-        	{
-        		probeNetwork(ip);
-        	}
-        }
+
+    	if(checkStorage())
+    	{
+    		mesh=new AndroidSneakermesh(this);
+    		LANProbe probe=new LANProbe(mesh);
+    		probe.start();
+    	}
     }
     
 	@Override
@@ -69,63 +58,7 @@ public class LANProbeService extends Service {
     	intent.putExtra("logline", s);
     	sendBroadcast(intent);    	    	
     }
-    
-    private String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-                NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress()) {
-                        return inetAddress.getHostAddress().toString();
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            log(ex.toString());
-        }
-        return null;
-    }    
-    
-    private void probeNetwork(String ip)
-    {
-    	String[] parts=ip.split("\\.");
-    	String me=parts[3];
-    	
-    	List<String> targets=new ArrayList<String>();
-    	
-    	for(int i=1; i<256; i++)
-    	{
-    	  String target=String.valueOf(i);
-    	  if(!target.equals(me))
-    	  {
-    	    targets.add(target);
-    	  }    	  
-    	}
-    	
-    	Collections.shuffle(targets);
-    	
-    	for(String target : targets)
-    	{
-          parts[3]=target;
-//          parts[3]="82"; // FIXME - remove debugging hardcoding
-//    	  probe(join(parts, "."));
-          probe("206.76.83.73");
-    	}
-    }
-    
-    private void probe(String ip)
-    {
-    	ProbeThread t=new ProbeThread(this, ip);
-    	t.start();
-    	try {
-			t.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    }
-           
+                   
     public boolean checkStorage()
     {
     	boolean mExternalStorageAvailable = false;
@@ -147,22 +80,4 @@ public class LANProbeService extends Service {
     	
     	return mExternalStorageAvailable && mExternalStorageWriteable;
     }
-    
-	private static String join(String[] s, String delim)
-	{
-		if(s.length==0)
-		{
-			return "";
-		}
-
-		StringBuffer buffer = new StringBuffer();
-		for(int i=0; i<s.length-1; i++)
-		{
-			buffer.append(s[i]);
-			buffer.append(delim);
-		}
-		buffer.append(s[s.length-1]);
-
-		return buffer.toString();
-	}
 }
