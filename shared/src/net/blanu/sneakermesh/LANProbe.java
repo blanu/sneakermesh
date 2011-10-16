@@ -15,7 +15,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class LANProbe extends Thread
 {
 	private static final String TAG = "LANProbe";	
-	private static final int MAX_PROBES=2;
+	private static final int MAX_PROBES=10;
 	Sneakermesh mesh;
 		
 	public LANProbe(Sneakermesh sm)
@@ -47,20 +47,25 @@ public class LANProbe extends Thread
     }
     
     private String getLocalIpAddress() {
+    	List<String>addrs=new ArrayList<String>();
+    	
         try {
             for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
                 NetworkInterface intf = en.nextElement();
                 for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
                     if (!inetAddress.isLoopbackAddress() && !inetAddress.getHostAddress().contains(":")) {
-                        return inetAddress.getHostAddress().toString();
+                    	addrs.add(inetAddress.getHostAddress().toString());
                     }
                 }
             }
         } catch (SocketException ex) {
             log(ex.toString());
+            return null;
         }
-        return null;
+
+        System.out.println("addrs: "+addrs);
+        return addrs.get(addrs.size()-1);
     }    
     
     private void probeNetwork(String ip)
@@ -98,9 +103,21 @@ public class LANProbe extends Thread
     		probes[x]=new ProbeThread(testing, results);
     		probes[x].start();
     	}
+
+    	for(int x=0; x<MAX_PROBES; x++)
+    	{
+    		try {
+				probes[x].join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+    	}
+    	
+    	log("found "+results.size()+" peers");
     	
     	for(Socket peer : results)
     	{
+    		log("syncing: "+peer);
     		mesh.sync(peer,  true);
     	}
     }

@@ -156,6 +156,7 @@ public class MessageListActivity extends ListActivity implements Logger
         setListAdapter(adapter);
         
         ListView lv = getListView();
+        lv.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
 
         lv.setOnItemClickListener(new OnItemClickListener() {
           public void onItemClick(AdapterView<?> parent, View view,

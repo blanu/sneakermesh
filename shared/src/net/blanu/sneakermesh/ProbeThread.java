@@ -1,5 +1,6 @@
 package net.blanu.sneakermesh;
 
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 
@@ -37,7 +38,8 @@ public class ProbeThread extends Thread
     	
     	try
     	{
-    	  sock=new Socket(ip, 11917);
+    	  sock=new Socket();
+    	  sock.connect(new InetSocketAddress(ip, 11917), 200);
     	  return sock;
     	}
     	catch(Exception e)
