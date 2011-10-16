@@ -6,13 +6,13 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DoneMessage extends Message {
-	static public DoneMessage read(DataInputStream is) throws IOException
+public class DoneCommand extends Command {
+	static public DoneCommand read(DataInputStream is) throws IOException
 	{
-		return new DoneMessage();
+		return new DoneCommand();
 	}
 	
-	public DoneMessage()
+	public DoneCommand()
 	{
 	}
 

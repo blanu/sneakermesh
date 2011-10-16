@@ -20,10 +20,10 @@ abstract public class Sneakermesh
 {
 	private static final String TAG = "Sneakermesh";
 
-	private Set<String> have;
+	Set<String> have;
 	private Set<String> want;
 	
-	private BlockingQueue<Message> queue;
+	private BlockingQueue<Command> queue;
 	
 	protected File root;	
 	
@@ -31,11 +31,11 @@ abstract public class Sneakermesh
 	{
 		root=f;
 		log("root: "+f);
-		GiveMessage.root=f;
+		GiveCommand.root=f;
 		
         have=new HashSet<String>();
         want=new HashSet<String>();
-        queue=new LinkedBlockingQueue<Message>();
+        queue=new LinkedBlockingQueue<Command>();
         
         loadHashes();
 	}
@@ -49,7 +49,7 @@ abstract public class Sneakermesh
 			DataInputStream is=new DataInputStream(sock.getInputStream());
 			DataOutputStream out = new DataOutputStream(sock.getOutputStream());
 			
-			queue.add(new HaveMessage(have));
+			queue.add(new HaveCommand(have));
 			
 			Thread reader=new ReadSync(is);
 			reader.start();
@@ -91,13 +91,20 @@ abstract public class Sneakermesh
 			try
 			{
 				log("reading command");
-				Message msg=Message.readCommand(is);
+				Command msg=Command.readCommand(is);
 				while(msg!=null)
 				{
 					log("command: "+msg);
-					execute(msg);
+					try
+					{
+						execute(msg);
+					}
+					catch(Exception e)
+					{
+						e.printStackTrace();
+					}
 					log("reading command");
-					msg=Message.readCommand(is);
+					msg=Command.readCommand(is);
 				}			
 			}
 			catch(Exception e)
@@ -123,7 +130,7 @@ abstract public class Sneakermesh
 				while(true)
 				{
 					log("writesync");
-					Message msg=queue.take();
+					Command msg=queue.take();
 					log("outgoing message: "+msg);
 					msg.write(out);
 				}
@@ -148,41 +155,50 @@ abstract public class Sneakermesh
 			return;
 		}
 		System.out.println("files: "+files);
-		
-		for(int x=0; x<files.length; x++)
+
+		synchronized(have)
 		{
-			File f=new File(root, files[x]);
-			if(f.length()>0)
+			synchronized(want)
 			{
-				log("I have: "+files[x]);
-				have.add(files[x]);
+				have.clear();
+				want.clear();
+				
+				for(int x=0; x<files.length; x++)
+				{
+					File f=new File(root, files[x]);
+					if(f.length()>0)
+					{
+						log("I have: "+files[x]);
+						have.add(files[x]);
+					}
+					else
+					{
+						log("I want: "+files[x]);
+						want.add(files[x]);
+					}
+				}
 			}
-			else
-			{
-				log("I want: "+files[x]);
-				want.add(files[x]);
-			}
-		}
+		}		
 	}
 	
-	private void execute(Message msg) throws IOException
+	private void execute(Command msg) throws IOException
 	{
 		log("executing msg");
-		if(msg instanceof HaveMessage)
+		if(msg instanceof HaveCommand)
 		{
-			execute((HaveMessage)msg);
+			execute((HaveCommand)msg);
 		}
-		else if(msg instanceof WantMessage)
+		else if(msg instanceof WantCommand)
 		{
-			execute((WantMessage)msg);
+			execute((WantCommand)msg);
 		}
-		else if(msg instanceof GiveMessage)
+		else if(msg instanceof GiveCommand)
 		{
-			execute((GiveMessage)msg);
+			execute((GiveCommand)msg);
 		}
 	}
 
-	private void execute(HaveMessage msg)
+	private void execute(HaveCommand msg)
 	{
 		log("executing have");
 		Set<String> available=new HashSet<String>(msg.have);		
@@ -202,7 +218,7 @@ abstract public class Sneakermesh
 				{
 					try {
 						log("loading queue");
-						queue.put(new WantMessage(new HashSet<String>(want)));
+						queue.put(new WantCommand(new HashSet<String>(want)));
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -212,7 +228,7 @@ abstract public class Sneakermesh
 		}
 	}
 
-	private void execute(WantMessage msg)
+	private void execute(WantCommand msg)
 	{
 		synchronized(have)
 		{
@@ -222,7 +238,7 @@ abstract public class Sneakermesh
 				{
 					try
 					{
-						queue.put(new GiveMessage(digest));
+						queue.put(new GiveCommand(digest));
 					}
 					catch(Exception e)
 					{
@@ -233,12 +249,14 @@ abstract public class Sneakermesh
 		}
 	}	
 
-	private void execute(GiveMessage msg) throws IOException
+	private void execute(GiveCommand msg) throws IOException
 	{	
-		log("executing give");
+		log("executing give: "+msg.size);
 		File file=new File(root, msg.digest);
 		FileOutputStream out=new FileOutputStream(file);
+		log("pumping");
 		pump(msg.stream, out, msg.size);
+		log("done pumping");
 		out.close();		
 
 		synchronized(want)
@@ -251,20 +269,42 @@ abstract public class Sneakermesh
 		{
 			have.add(msg.digest);
 			log("now have: "+have.size());
+			fireHaveChangeEvent(msg.digest);
 		}
 	}
+	
+	public void fireHaveChangeEvent(String digest)
+	{		
+		log("fireHaveChangeEvent default");
+	}
 
-	public void addMessage(String msg) throws IOException
+	public void addTextMessage(String msg) throws IOException
 	{
-		String digest=hash(msg);
+		TextMessage tm=new TextMessage(msg);
+		addMessage(tm);
+	}
+	
+	public void addMessage(Message msg) throws IOException
+	{
+		String digest=msg.getDigest();
 		File file=new File(root, digest);
 		FileOutputStream out=new FileOutputStream(file);
-		out.write(msg.getBytes());
+		DataOutputStream dout=new DataOutputStream(out);
+		msg.write(dout);
 		out.close();		
 		
 		synchronized(have)
 		{
 			have.add(digest);
+			fireHaveChangeEvent(digest);
+			synchronized(queue)
+			{
+				try {
+					queue.put(new HaveCommand(have));
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 	
@@ -287,7 +327,7 @@ abstract public class Sneakermesh
 		return asHex(digest);
 	}
 	
-	static public void pump(InputStream is, OutputStream out, long maxlen)
+	public void pump(InputStream is, OutputStream out, long maxlen)
 	{
 		int buffsize=1024;
 		byte[] buff=new byte[buffsize];
@@ -303,8 +343,9 @@ abstract public class Sneakermesh
 			{
 				toread=buffsize;
 			}
+			
 			int read=is.read(buff, 0, toread);
-			while(read!=-1)
+			while(read!=-1 && count<maxlen)
 			{	
 				out.write(buff, 0, read);
 				count=count+read;
@@ -322,10 +363,13 @@ abstract public class Sneakermesh
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
+		
+		log("pump read "+count+" of "+maxlen);
 	}
 
-	public List<String> getMessages() {
-		List<String> msgs=new ArrayList<String>();
+	public List<Message> getMessages()
+	{
+		List<Message> msgs=new ArrayList<Message>();
 		
 		synchronized(have)
 		{
@@ -338,17 +382,51 @@ abstract public class Sneakermesh
 					try
 					{
 						FileInputStream fis=new FileInputStream(file);
-						byte[] contents=Util.fillBuffer(fis, (int)size);
-						msgs.add(new String(contents));
+						DataInputStream dis=new DataInputStream(fis);
+						TextMessage msg=(TextMessage)Message.readMessage(dis);
+						msgs.add(msg);
 					}
 					catch(Exception e)
 					{
 						e.printStackTrace();
 					}
 				}
+				else
+				{
+					log("Bad file: "+file);
+				}
 			}
 		}
 		
+		log("getMessages: "+have.size()+" / "+msgs.size());
+		
 		return msgs;
+	}
+
+	public void deleteMessages() {
+		if(root==null)
+		{
+			return;
+		}
+		String[] files=root.list();
+		if(files==null)
+		{
+			return;
+		}
+
+		synchronized(have)
+		{
+			synchronized(want)
+			{
+				have.clear();
+				want.clear();
+			}
+		}
+				
+		for(int x=0; x<files.length; x++)
+		{
+			File f=new File(root, files[x]);
+			f.delete();
+		}		
 	}		
 }

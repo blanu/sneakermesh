@@ -7,12 +7,18 @@
     <uses-permission android:name="android.permission.INTERNET" /> 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>    
     <application android:icon="@drawable/icon" android:label="@string/app_name">
-        <activity android:name=".SneakermeshActivity"
+        <activity android:name=".LogViewerActivity"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".MessageListActivity"
+                  android:label="@string/message_list">
+        </activity>
+        <activity android:name=".AddMessageActivity"
+                  android:label="@string/add_message">
         </activity>
         <service android:name=".LANProbeService" />
     </application>

@@ -1,32 +1,40 @@
 package net.blanu.sneakermesh;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public abstract class Message implements Comparable<Message>
+public abstract class Command implements Comparable<Command>
 {
-	protected static final int MSG_TEXT=0;
-		
-	public int compareTo(Message obj)
+	protected static final int CMD_HAVE=0;
+	protected static final int CMD_WANT=1;
+	protected static final int CMD_GIVE=2;
+	protected static final int CMD_DONE=3;	
+	
+	public int compareTo(Command obj)
 	{
 		return 0;
 	}
 	
-	public static Message readMessage(DataInputStream is) throws IOException
+	public static Command readCommand(DataInputStream is) throws IOException
 	{
-		int msgType=is.read();
+		int peerCmd=is.read();
 
-		switch(msgType)
+		switch(peerCmd)
 		{
 		case -1:
 			return null;
-		case MSG_TEXT:
-			return TextMessage.read(is);
+		case CMD_HAVE:
+			return HaveCommand.read(is);
+		case CMD_WANT:
+			return WantCommand.read(is);
+		case CMD_GIVE:
+			return GiveCommand.read(is);
+		case CMD_DONE:
+			return DoneCommand.read(is);
 		default:
-			System.out.println("Unknown message: "+msgType);
+			System.out.println("Unknown command: "+peerCmd);
 			return null;
 		}
 	}
@@ -56,22 +64,6 @@ public abstract class Message implements Comparable<Message>
 		}
 		return digest;
 	}	
-	
-	public String getDigest()
-	{
-		try {
-			ByteArrayOutputStream out=new ByteArrayOutputStream();
-			DataOutputStream dout=new DataOutputStream(out);
-			write(dout);
-			dout.close();
-			
-			byte[] digest=Skein.hash(out.toByteArray());
-			return Util.asHex(digest);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
-		}		
-	}
 	
 	abstract public void write(DataOutputStream out) throws IOException;
 }

@@ -11,17 +11,21 @@ import java.util.Collections;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 
-public class LANProbeService extends Service {
+public class LANProbeService extends Service implements Logger
+{
 	private static final String TAG = "LANProbe";	
-	Sneakermesh mesh;
+	Sneakermesh mesh=null;
+	LANProbe probe=null;
 
 	public String BROADCAST_ACTION;
 	Intent intent;
-
+    private final IBinder mBinder = new LocalBinder();
+    
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -30,20 +34,36 @@ public class LANProbeService extends Service {
 	}
 
     @Override
-    public void onStart(Intent intent, int startId) {
+    public int onStartCommand(Intent intent, int flags, int startId) {
     	log("Started");
 
-    	if(checkStorage())
+    	if(mesh==null)
     	{
-    		mesh=new AndroidSneakermesh(this);
-    		LANProbe probe=new LANProbe(mesh);
-    		probe.start();
+    		if(checkStorage())
+    		{
+    			mesh=new AndroidSneakermesh(this);
+    			probe=new LANProbe(mesh);
+    			probe.start();
+    		}
     	}
+    	
+    	return START_STICKY;
     }
+    
+    public Sneakermesh getMesh()
+    {
+    	return mesh;
+    }
+    
+    public class LocalBinder extends Binder {
+        LANProbeService getService() {
+            return LANProbeService.this;
+        }
+    }    
     
 	@Override
 	public IBinder onBind(Intent intent) {
-		return null;
+		return mBinder;
 	}
 
 	@Override

@@ -7,21 +7,35 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Enumeration;
+import java.util.Scanner;
 
-public class Server
+public class Server extends Thread
 {
 	private static final String TAG="Server";
 	Sneakermesh mesh;
 	
 	public static void main(String[] args)
 	{
-		Server server=new Server();
-		server.run();
+		Sneakermesh sm=new LaptopSneakermesh();
+		
+		Server server=new Server(sm);
+		server.start();
+		
+		Scanner scanner=new Scanner(System.in);
+		while(true)
+		{
+			String line=scanner.nextLine();
+			try {
+				sm.addMessage(new TextMessage(line));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
-	public Server()
+	public Server(Sneakermesh sm)
 	{
-		mesh=new LaptopSneakermesh();
+		mesh=sm;
 		System.out.println("my ip: "+getLocalIpAddress());
 	}
 	
@@ -40,7 +54,6 @@ public class Server
 			try {
 				sock = server.accept();
 				System.out.println("Accepted: "+sock);
-//				mesh.sync(sock, false);				
 				mesh.sync(sock, true);				
 			} catch (IOException e) {
 				e.printStackTrace();

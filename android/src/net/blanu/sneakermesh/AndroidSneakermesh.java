@@ -1,14 +1,16 @@
 package net.blanu.sneakermesh;
 
+import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 public class AndroidSneakermesh extends Sneakermesh
 {
 	static private final String TAG="Sneakermesh";
 	
-	private LANProbeService probe;
+	private Context probe;
 	
-	public AndroidSneakermesh(LANProbeService p)
+	public AndroidSneakermesh(Context p)
 	{
 		super(p.getExternalFilesDir(null));		
 		if(root==null)
@@ -23,7 +25,16 @@ public class AndroidSneakermesh extends Sneakermesh
 	{
 		if(probe!=null)
 		{
-			probe.log(s);
+			((Logger)probe).log(s);
 		}
 	}
+	
+	public void fireHaveChangeEvent(String digest)
+	{
+		log("fireHaveChangeEvent android");
+		String REFRESH_ACTION=probe.getPackageName()+".refresh";
+    	Intent intent = new Intent(REFRESH_ACTION);		
+    	log("broadcasting "+REFRESH_ACTION);
+    	probe.sendBroadcast(intent);
+    }	
 }

@@ -8,10 +8,14 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Collections;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class LANProbe extends Thread
 {
 	private static final String TAG = "LANProbe";	
+	private static final int MAX_PROBES=2;
 	Sneakermesh mesh;
 		
 	public LANProbe(Sneakermesh sm)
@@ -77,36 +81,30 @@ public class LANProbe extends Thread
     	
     	Collections.shuffle(targets);
     	
+    	BlockingQueue<String> testing=new LinkedBlockingQueue<String>();
+    	
     	for(String target : targets)
     	{
-          parts[3]=target;
-          parts[3]="93"; // FIXME - remove debugging hardcoding
-//    	  probe(join(parts, "."));
-//          probe("206.76.83.73");
-          probe("192.168.1.93");
+    		parts[3]=target;
+    		testing.add(join(parts, "."));
+    	}
+    	
+    	BlockingQueue<Socket> results=new LinkedBlockingQueue<Socket>();
+    	
+    	ProbeThread[] probes=new ProbeThread[MAX_PROBES];
+    	
+    	for(int x=0; x<MAX_PROBES; x++)
+    	{
+    		probes[x]=new ProbeThread(testing, results);
+    		probes[x].start();
+    	}
+    	
+    	for(Socket peer : results)
+    	{
+    		mesh.sync(peer,  true);
     	}
     }
-    
-    private void probe(String ip)
-    {
-    	log(ip);
-
-    	Socket sock=null;
-    	
-    	try
-    	{
-    	  sock=new Socket(ip, 11917);
-    	}
-    	catch(Exception e)
-    	{
-    		log("fail ");
-    		return;
-    	}
-
-  	  log("succeed");
-  	  mesh.sync(sock, true);
-    }           
-    
+        
 	private static String join(String[] s, String delim)
 	{
 		if(s.length==0)

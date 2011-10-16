@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class HaveMessage extends Message {
+public class HaveCommand extends Command {
 	public Set<String> have;
 	
-	static public HaveMessage read(DataInputStream is) throws IOException
+	static public HaveCommand read(DataInputStream is) throws IOException
 	{
 		Set<String>peerHas=new HashSet<String>();
 		int num=is.read();
@@ -19,10 +19,10 @@ public class HaveMessage extends Message {
 			peerHas.add(digest);
 		}
 		
-		return new HaveMessage(peerHas);
+		return new HaveCommand(peerHas);
 	}
 	
-	public HaveMessage(Set<String> set)
+	public HaveCommand(Set<String> set)
 	{
 		have=set;
 	}

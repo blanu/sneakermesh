@@ -10,6 +10,6 @@ public class AddMessage {
 		String msg=scanner.nextLine();
 		
 		Sneakermesh mesh=new LaptopSneakermesh();
-		mesh.addMessage(msg);
+		mesh.addMessage(new TextMessage(msg));
 	}
 }

@@ -11,29 +11,29 @@ import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.Set;
 
-public class GiveMessage extends Message {
+public class GiveCommand extends Command {
 	protected String digest;
 	protected long size;
 	protected InputStream stream;
 	
 	static protected File root=null;
 	
-	static public GiveMessage read(DataInputStream is) throws IOException
+	static public GiveCommand read(DataInputStream is) throws IOException
 	{
 		String s=readDigest(is);
 		long l=is.readLong();
 				
-		return new GiveMessage(s, l, is);
+		return new GiveCommand(s, l, is);
 	}
 	
-	public GiveMessage(String s, long l, InputStream is)
+	public GiveCommand(String s, long l, InputStream is)
 	{
 		digest=s;
 		size=l;
 		stream=is;
 	}
 	
-	public GiveMessage(String s) throws FileNotFoundException
+	public GiveCommand(String s) throws FileNotFoundException
 	{
 		digest=s;
 		File f=new File(root, digest);

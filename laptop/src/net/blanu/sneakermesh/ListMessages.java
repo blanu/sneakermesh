@@ -8,10 +8,11 @@ public class ListMessages {
 	public static void main(String[] args) throws IOException {		
 		Sneakermesh mesh=new LaptopSneakermesh();
 		
-		List<String> msgs=mesh.getMessages();
-		for(String msg : msgs)
+		List<Message> msgs=mesh.getMessages();
+		for(Message msg : msgs)
 		{
-			System.out.println(msg);
+			TextMessage tm=(TextMessage)msg;
+			System.out.println(tm.text);
 		}
 	}
 }

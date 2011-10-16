@@ -2,4 +2,11 @@
 <resources>
     <string name="hello">Hello World, SneakermeshActivity!</string>
     <string name="app_name">Sneakermesh</string>
+    <string name="log">Log</string>
+    <string name="list">List</string>
+    <string name="message_list">Messages</string>
+    <string name="add_message">Post a message</string>
+    <string name="submit">Submit</string>
+    <string name="add">Add</string>
+    <string name="destroy">Destroy</string>
 </resources>
