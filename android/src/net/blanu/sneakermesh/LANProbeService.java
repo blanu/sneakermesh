@@ -41,7 +41,20 @@ public class LANProbeService extends Service implements Logger
     	{
     		if(checkStorage())
     		{
+    			log("New mesh");
+
     			mesh=new AndroidSneakermesh(this);
+    			
+    			try
+    			{
+    				SyncServer server=new SyncServer(mesh);
+    				server.start();    			
+    			}
+    			catch(Exception e)
+    			{
+    				e.printStackTrace();
+    			}
+    			
     			probe=new LANProbe(mesh);
     			probe.start();
     		}

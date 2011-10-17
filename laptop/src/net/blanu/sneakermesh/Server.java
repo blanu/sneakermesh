@@ -18,7 +18,7 @@ public class Server extends Thread
 	{
 		Sneakermesh sm=new LaptopSneakermesh();
 		
-		Server server=new Server(sm);
+		SyncServer server=new SyncServer(sm);
 		server.start();
 		
 		Scanner scanner=new Scanner(System.in);
@@ -32,49 +32,4 @@ public class Server extends Thread
 			}
 		}
 	}
-	
-	public Server(Sneakermesh sm)
-	{
-		mesh=sm;
-		System.out.println("my ip: "+getLocalIpAddress());
-	}
-	
-	public void run()
-	{
-		ServerSocket server = null;
-		try {
-			server = new ServerSocket(11917);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-				
-		while(true)
-		{
-			Socket sock = null;
-			try {
-				sock = server.accept();
-				System.out.println("Accepted: "+sock);
-				mesh.sync(sock, true);				
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	}	    
-	
-    private String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-                NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress() && !inetAddress.getHostAddress().toString().contains(":")) {
-                        return inetAddress.getHostAddress().toString();
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            System.out.println(ex.toString());
-        }
-        return null;
-    }    	
 }

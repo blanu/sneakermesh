@@ -4,6 +4,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.SecureRandom;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Util
 {
@@ -46,4 +52,30 @@ public class Util
 		}
 		return strbuf.toString();
 	}	
+	
+	public static byte[] encrypt(String password, String plaintext) throws Exception {
+		return crypt(password, plaintext, Cipher.ENCRYPT_MODE);
+	}
+	
+	public static byte[] decrypt(String password, String plaintext) throws Exception {
+		return crypt(password, plaintext, Cipher.DECRYPT_MODE);
+	}
+	
+	public static byte[] crypt(String password, String plaintext, int mode) throws Exception {
+        KeyGenerator keygen = KeyGenerator.getInstance("AES");
+        SecureRandom secrand = SecureRandom.getInstance("SHA1PRNG");
+        secrand.setSeed(password.getBytes());
+
+        keygen.init(128, secrand);
+        SecretKey seckey = keygen.generateKey();
+        byte[] rawKey = seckey.getEncoded();
+
+        SecretKeySpec skeySpec = new SecretKeySpec(rawKey, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+
+        cipher.init(mode, skeySpec);
+        byte[] encrypted = cipher.doFinal(plaintext.getBytes());
+
+        return encrypted;
+    }		
 }
