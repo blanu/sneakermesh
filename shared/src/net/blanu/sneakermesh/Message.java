@@ -3,33 +3,87 @@ package net.blanu.sneakermesh;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public abstract class Message implements Comparable<Message>
 {
 	protected static final int MSG_TEXT=0;
+	protected static final int MSG_PHOTO=1;
+	
+	public int type;
+	public long timestamp;
+	public int size;	
 		
-	public int compareTo(Message obj)
+	public int compareTo(Message m)
 	{
-		return 0;
+		return new Long(timestamp).compareTo(new Long(m.timestamp));
 	}
 	
 	public static Message readMessage(DataInputStream is) throws IOException
 	{
 		int msgType=is.read();
 
+		long ts=is.readLong();
+		System.out.println("timestamp: "+ts);
+		int num=is.readInt();
+		System.out.println("num: "+num);		
+		
 		switch(msgType)
 		{
 		case -1:
 			return null;
 		case MSG_TEXT:
-			return TextMessage.read(is);
+			return new TextMessage(ts, num, is);
 		default:
 			System.out.println("Unknown message: "+msgType);
 			return null;
 		}
 	}
+	
+	static public Message readMessage(File f) throws IOException
+	{		
+		long ts=f.lastModified();
+		System.out.println("timestamp: "+ts);
+		int num=(int)f.length();
+		InputStream is=new FileInputStream(f);
+		
+		if(f.getAbsolutePath().contains("Pictures"))
+		{
+			return new PhotoMessage(ts, num, is);			
+		}
+		else
+		{
+			return new TextMessage(ts, num, is);
+		}
+	}	
+	
+	public Message(int t, long ts, int num)
+	{
+		type=t;
+		timestamp=ts;
+		size=num;
+	}
+	
+	public void write(DataOutputStream out) throws IOException
+	{
+		out.write(type);
+		out.writeLong(timestamp);
+		out.writeInt(size);
+		writeData(out);
+	}
+	
+	public void write(File f) throws IOException
+	{
+		OutputStream out=new FileOutputStream(f);
+		writeData(out);
+		out.close();
+		f.setLastModified(timestamp);
+	}	
 	
 	static protected String readDigest(InputStream is)
 	{
@@ -73,5 +127,10 @@ public abstract class Message implements Comparable<Message>
 		}		
 	}
 	
-	abstract public void write(DataOutputStream out) throws IOException;
+	public String toString()
+	{
+		return "[Message: "+timestamp+"]";
+	}	
+	
+	abstract public void writeData(OutputStream out) throws IOException;
 }

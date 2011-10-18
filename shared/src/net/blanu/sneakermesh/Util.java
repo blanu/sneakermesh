@@ -1,10 +1,18 @@
 package net.blanu.sneakermesh;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Formatter;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -40,19 +48,37 @@ public class Util
 		return digest;
 	}	
 	
-	public static String asHex(byte buf[])
+	public String hash(File f) throws NoSuchAlgorithmException, IOException
 	{
-		StringBuffer strbuf = new StringBuffer(buf.length * 2);
-
-		for(int i=0; i< buf.length; i++)
+		try
 		{
-			if(((int) buf[i] & 0xff) < 0x10)
-				strbuf.append("0");
-			strbuf.append(Long.toString((int) buf[i] & 0xff, 16));
+			MessageDigest sha1 = MessageDigest.getInstance("SHA1");		
+
+			FileInputStream     fis = new FileInputStream(f);
+			BufferedInputStream bis = new BufferedInputStream(fis);
+			DigestInputStream   dis = new DigestInputStream(bis, sha1);
+
+			while (dis.read() != -1);
+
+			byte[] hash = sha1.digest();
+
+			return asHex(hash);	
 		}
-		return strbuf.toString();
+		catch(NoSuchAlgorithmException e)
+		{
+			e.printStackTrace();
+			return null;
+		}
 	}	
 	
+    static String asHex(byte[] hash) {
+        Formatter formatter = new Formatter();
+        for (byte b : hash) {
+            formatter.format("%02x", b);
+        }
+        return formatter.toString();
+    }	
+		
 	public static byte[] encrypt(String password, String plaintext) throws Exception {
 		return crypt(password, plaintext, Cipher.ENCRYPT_MODE);
 	}

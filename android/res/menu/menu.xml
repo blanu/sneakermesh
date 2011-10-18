@@ -6,6 +6,8 @@
           android:title="@string/list" />  
     <item android:id="@+id/add"
           android:title="@string/add" />            
+    <item android:id="@+id/addphoto"
+          android:title="@string/addphoto" />            
     <item android:id="@+id/destroy"
           android:title="@string/destroy" />            
 </menu>

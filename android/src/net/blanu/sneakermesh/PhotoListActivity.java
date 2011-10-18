@@ -28,7 +28,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MessageListActivity extends SneakermeshListActivity implements Logger
+public class PhotoListActivity extends SneakermeshListActivity implements Logger
 {
 	private static final String TAG="MessageListActivity";
 	        

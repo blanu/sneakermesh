@@ -20,6 +20,9 @@
         <activity android:name=".AddMessageActivity"
                   android:label="@string/add_message">
         </activity>
+        <activity android:name=".AddPhotoActivity"
+                  android:label="@string/addphoto">
+        </activity>
         <service android:name=".LANProbeService" />
     </application>
 </manifest>

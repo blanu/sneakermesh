@@ -1,6 +1,12 @@
 package net.blanu.sneakermesh;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import android.app.Activity;
+import android.app.ListActivity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -10,15 +16,24 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
-public class SneakermeshActivity extends Activity implements Logger
-{	
-	private static final String TAG="SneakermeshActivity";
+abstract public class SneakermeshListActivity extends ListActivity implements Logger
+{
+	private static final String TAG="SneakermeshListActivity";
 	Intent serviceIntent;
+	String REFRESH_ACTION;
+	ArrayAdapter<String> adapter;
     LANProbeService probe;
     boolean isBound=false;
 	
@@ -27,8 +42,10 @@ public class SneakermeshActivity extends Activity implements Logger
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        serviceIntent=new Intent(this, LANProbeService.class);
-    }	
+        REFRESH_ACTION=this.getPackageName()+".refresh";        
+        
+        serviceIntent=new Intent(this, LANProbeService.class);        
+    }
     
     @Override
     protected void onResume() {
@@ -36,72 +53,69 @@ public class SneakermeshActivity extends Activity implements Logger
         // The activity has become visible (it is now "resumed").
         
         startService(serviceIntent);                        
+        registerReceiver(broadcastReceiver, new IntentFilter(REFRESH_ACTION));        
         doBindService();
-    }    
+    }       
     
     @Override
     protected void onPause() {
         super.onPause();
         // Another activity is taking focus (this activity is about to be "paused").
         
+		unregisterReceiver(broadcastReceiver);
 //		stopService(serviceIntent);         
-    	doUnbindService();
+		doUnbindService();
     }    
-    	
+    
     @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
+    public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu, menu);
         return true;
     }    
     
     @Override
-    public boolean onOptionsItemSelected(MenuItem item)
-    {
+    public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
         case R.id.log:
         	launchLog();
-        	return true;
+            return true;
         case R.id.list:
         	launchList();
             return true;
         case R.id.add:
         	launchAdd();
-        	return true;
+        	return true;            
         case R.id.addphoto:
         	launchPhoto();
-        	return true;
-        case R.id.destroy:
-        	selfDestruct();
         	return true;        	
         default:
             return super.onOptionsItemSelected(item);
         }
     }    
     
-    protected void launchLog()
+    private void launchLog()
     {
     	log("Launching log activity");
     	Intent intent=new Intent(this, LogViewerActivity.class);
     	startActivity(intent);    	
-    }    
+    }
     
-    protected void launchList()
+    private void launchList()
     {
     	log("Launching list activity");
     	Intent intent=new Intent(this, MessageListActivity.class);
     	startActivity(intent);
     }
-    
-    protected void launchAdd()
+
+    private void launchAdd()
     {
     	log("Launching add activity");
     	Intent intent=new Intent(this, AddMessageActivity.class);
     	startActivity(intent);
-    }    
-    
+    }        
+        
     protected void launchPhoto()
     {
     	log("Launching photo activity");
@@ -109,23 +123,28 @@ public class SneakermeshActivity extends Activity implements Logger
     	startActivity(intent);
     }    
     
-    public void selfDestruct()
-    {
-    	probe.getMesh().deleteMessages();
-    	launchList();
-    }
-                
     public void log(String logline)
     {
     	Log.e(TAG, logline);
     }
     
-
+    abstract protected void refreshUI();
+    abstract protected void createView();
+    
+    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+        	Log.e(TAG, "onReceive");
+        	refreshUI();       
+        }
+    };          
+    
     private ServiceConnection connection = new ServiceConnection()
     {
         public void onServiceConnected(ComponentName className, IBinder service)
         {
             probe = ((LANProbeService.LocalBinder)service).getService();
+            createView();
         }
 
         public void onServiceDisconnected(ComponentName className)
@@ -147,5 +166,5 @@ public class SneakermeshActivity extends Activity implements Logger
             unbindService(connection);
             isBound = false;
         }
-    }
+    }    
 }
