@@ -13,12 +13,12 @@ import java.util.Set;
 
 public class PhotoMessage extends Message
 {
-	public String text;
+	public String path;
 	
 	public PhotoMessage(long ts, String s)
 	{
 		super(MSG_PHOTO, ts, s.length());
-		text=s;
+		path=s;
 	}
 	
 	public PhotoMessage(String s)
@@ -33,11 +33,11 @@ public class PhotoMessage extends Message
 	
 	public void writeData(OutputStream out) throws IOException
 	{
-		out.write(text.getBytes());
+		out.write(path.getBytes());
 	}
 	
 	public String toString()
 	{
-		return "[Photo: "+text+"]";
+		return "[Photo: "+path+"]";
 	}
 }

@@ -13,64 +13,39 @@ import java.util.Set;
 
 public class GiveCommand extends Command {
 	protected String digest;
-	protected long size;
-	protected InputStream stream;
+	protected Message msg;
 	
 	static protected File root=null;
 	
 	static public GiveCommand read(DataInputStream is) throws IOException
 	{
 		String s=readDigest(is);
-		long l=is.readLong();
 				
-		return new GiveCommand(s, l, is);
+		return new GiveCommand(s, is);
 	}
 	
-	public GiveCommand(String s, long l, InputStream is)
+	public GiveCommand(String s, DataInputStream is) throws IOException
 	{
 		digest=s;
-		size=l;
-		stream=is;
+		msg=Message.readMessage(is);
 	}
 	
-	public GiveCommand(String s) throws FileNotFoundException
+	public GiveCommand(String s) throws IOException
 	{
 		digest=s;
 		File f=new File(root, digest);
-		size=f.length();
-		stream=new FileInputStream(f);
+		msg=Message.readMessage(f);
 	}
 
 	public void write(DataOutputStream out) throws IOException
 	{
 		out.write(CMD_GIVE);		
 		out.write(digest.getBytes());
-		out.writeLong(size);
-		pump(stream, out);
+		msg.write(out);
 	}
-	
-	static public void pump(InputStream is, OutputStream out)
-	{
-		int buffsize=1024;
-		byte[] buff=new byte[buffsize];
-		int count=0;
-		
-		try {
-			int read=is.read(buff, 0, buffsize);
-			while(read!=-1)
-			{	
-				out.write(buff, 0, read);
-				count=count+read;
-				read=is.read(buff, 0, buffsize);
-			}
-		} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-		}
-	}	
 	
 	public String toString()
 	{
-		return "[Give: "+digest+" : "+size+"]";
+		return "[Give: "+digest+" : "+msg+"]";
 	}	
 }

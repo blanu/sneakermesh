@@ -34,8 +34,8 @@ public class Util
 		int count=0;
 		while(count<digest.length)
 		{
-			int read;
 			try {
+			int read;
 				read = is.read(digest, offset, digest.length-offset);
 				offset=offset+read;
 				count=count+read;

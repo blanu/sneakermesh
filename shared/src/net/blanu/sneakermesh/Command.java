@@ -60,6 +60,7 @@ public abstract class Command implements Comparable<Command>
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return null;
 			}
 		}
 		return digest;

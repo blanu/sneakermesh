@@ -249,27 +249,23 @@ abstract public class Sneakermesh
 		}
 	}	
 
-	private void execute(GiveCommand msg) throws IOException
+	private void execute(GiveCommand cmd) throws IOException
 	{	
-		log("executing give: "+msg.size);
-		File file=new File(root, msg.digest);
-		FileOutputStream out=new FileOutputStream(file);
-		log("pumping");
-		pump(msg.stream, out, msg.size);
-		log("done pumping");
-		out.close();		
+		log("executing give: "+cmd);
+		File file=new File(root, cmd.digest);
+		cmd.msg.write(file);
 
 		synchronized(want)
 		{
-			want.remove(msg.digest);
+			want.remove(cmd.digest);
 			log("now want: "+want.size());
 		}
 		
 		synchronized(have)
 		{
-			have.add(msg.digest);
+			have.add(cmd.digest);
 			log("now have: "+have.size());
-			fireHaveChangeEvent(msg.digest);
+			fireHaveChangeEvent(cmd.digest);
 		}
 	}
 	
