@@ -19,11 +19,11 @@ import android.util.Log;
 public class LANProbeService extends Service implements Logger
 {
 	private static final String TAG = "LANProbe";	
-	Sneakermesh mesh=null;
-	LANProbe probe=null;
+	static Sneakermesh mesh=null;
+	static LANProbe probe=null;
 
-	public String BROADCAST_ACTION;
-	Intent intent;
+	static public String BROADCAST_ACTION;
+	static Intent intent;
     private final IBinder mBinder = new LocalBinder();
     
 	@Override
@@ -31,6 +31,7 @@ public class LANProbeService extends Service implements Logger
 		super.onCreate();
 		BROADCAST_ACTION=this.getPackageName()+".log";
     	intent = new Intent(BROADCAST_ACTION);	
+		log("LANProbeService.onCreate");
 	}
 
     @Override
@@ -39,6 +40,7 @@ public class LANProbeService extends Service implements Logger
 
     	if(mesh==null)
     	{
+    		log("Fresh mesh");
     		if(checkStorage())
     		{
     			log("New mesh");
@@ -58,6 +60,10 @@ public class LANProbeService extends Service implements Logger
     			probe=new LANProbe(mesh);
     			probe.start();
     		}
+    	}
+    	else
+    	{
+    		log("singleton!");
     	}
     	
     	return START_STICKY;
@@ -82,6 +88,7 @@ public class LANProbeService extends Service implements Logger
 	@Override
 	public void onDestroy() {		
 		super.onDestroy();
+		log("LANProbeService.onDestroy");
 	}	    
     
     public void log(String s)

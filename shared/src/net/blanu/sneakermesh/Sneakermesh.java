@@ -252,8 +252,7 @@ abstract public class Sneakermesh
 	private void execute(GiveCommand cmd) throws IOException
 	{	
 		log("executing give: "+cmd);
-		File file=new File(root, cmd.digest);
-		cmd.msg.write(file);
+		cmd.msg.save(root);
 
 		synchronized(want)
 		{
@@ -282,12 +281,8 @@ abstract public class Sneakermesh
 	
 	public void addMessage(Message msg) throws IOException
 	{
-		String digest=msg.getDigest();
-		File file=new File(root, digest);
-		FileOutputStream out=new FileOutputStream(file);
-		DataOutputStream dout=new DataOutputStream(out);
-		msg.write(dout);
-		out.close();		
+		String digest=msg.digest;
+		msg.save(root);
 		
 		synchronized(have)
 		{

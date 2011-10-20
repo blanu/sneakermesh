@@ -1,5 +1,6 @@
 package net.blanu.sneakermesh;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -17,29 +18,43 @@ public class TextMessage extends Message
 {
 	public String text;
 	
-	public TextMessage(long ts, String s)
+	public TextMessage(long ts, int num, InputStream is) throws IOException
 	{
-		super(MSG_TEXT, ts, s.length());
-		text=s;
+		super(MSG_TEXT, ts, num, is);
+	}	
+	
+	public TextMessage(long ts, int num, File f) throws IOException
+	{
+		super(MSG_TEXT, ts, num, f);
+	}	
+	
+	public TextMessage(long ts, String s) throws IOException
+	{
+		super(MSG_TEXT, ts, s.length(), new ByteArrayInputStream(s.getBytes()));
 	}
 	
-	public TextMessage(String s)
+	public TextMessage(String s) throws IOException
 	{
 		this(new Date().getTime(), s);
-	}	
+	}		
 	
-	public TextMessage(long ts, int num, InputStream is)
+	public String getText()
 	{
-		this(ts, new String(Util.fillBuffer(is, num)));
-	}	
-	
-	public void writeData(OutputStream out) throws IOException
-	{
-		out.write(text.getBytes());
+		try
+		{
+			FileInputStream in=new FileInputStream(file);
+			byte[] buff=Util.fillBuffer(in, size);
+			return new String(buff);
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+			return null;
+		}
 	}
-	
+			
 	public String toString()
 	{
-		return "[Text: "+text+"]";
+		return "[Text: "+file.length()+"]";
 	}
 }

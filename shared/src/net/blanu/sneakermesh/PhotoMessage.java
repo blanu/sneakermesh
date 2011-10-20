@@ -15,26 +15,15 @@ public class PhotoMessage extends Message
 {
 	public String path;
 	
-	public PhotoMessage(long ts, String s)
+	public PhotoMessage(long ts, int num, InputStream is) throws IOException
 	{
-		super(MSG_PHOTO, ts, s.length());
-		path=s;
-	}
-	
-	public PhotoMessage(String s)
-	{
-		this(new Date().getTime(), s);
+		super(MSG_PHOTO, ts, num, is);
 	}	
-	
-	public PhotoMessage(long ts, int num, InputStream is)
+		
+	public PhotoMessage(long ts, int num, File f) throws IOException
 	{
-		this(ts, new String(Util.fillBuffer(is, num)));
+		super(MSG_PHOTO, ts, num, f);
 	}	
-	
-	public void writeData(OutputStream out) throws IOException
-	{
-		out.write(path.getBytes());
-	}
 	
 	public String toString()
 	{

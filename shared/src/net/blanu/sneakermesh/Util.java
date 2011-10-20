@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -48,7 +49,7 @@ public class Util
 		return digest;
 	}	
 	
-	public String hash(File f) throws NoSuchAlgorithmException, IOException
+	public static String hash(File f) throws IOException
 	{
 		try
 		{
@@ -70,6 +71,69 @@ public class Util
 			return null;
 		}
 	}	
+
+	public static String pump(InputStream in, OutputStream out, long maxlen)
+	{
+		int buffsize=1024;
+		byte[] buff=new byte[buffsize];
+		int count=0;
+
+		MessageDigest sha1=null;
+		try
+		{			
+			sha1 = MessageDigest.getInstance("SHA1");		
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		
+		BufferedInputStream bis = new BufferedInputStream(in);
+		DigestInputStream is = new DigestInputStream(bis, sha1);		
+		
+		try {
+			int toread;
+			if(count+buffsize>maxlen)
+			{
+				toread=(int)(buffsize-((count+buffsize)-maxlen));
+			}
+			else
+			{
+				toread=buffsize;
+			}
+			
+			int read=is.read(buff, 0, toread);
+			while(read!=-1 && count<maxlen)
+			{	
+				out.write(buff, 0, read);
+				count=count+read;
+				if(count+buffsize>maxlen)
+				{
+					toread=(int)(buffsize-((count+buffsize)-maxlen));
+				}
+				else
+				{
+					toread=buffsize;
+				}
+				read=is.read(buff, 0, toread);
+			}
+		} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+		}
+		
+		System.out.println("pump read "+count+" of "+maxlen);
+
+		if(sha1==null)
+		{
+			return null;
+		}
+		else
+		{
+			byte[] hash = sha1.digest();
+			return asHex(hash);	
+		}
+	}
 	
     static String asHex(byte[] hash) {
         Formatter formatter = new Formatter();

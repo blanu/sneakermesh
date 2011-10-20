@@ -28,6 +28,7 @@ public class SneakermeshActivity extends Activity implements Logger
         super.onCreate(savedInstanceState);
 
         serviceIntent=new Intent(this, LANProbeService.class);
+        startService(serviceIntent);                        
     }	
     
     @Override
@@ -35,7 +36,6 @@ public class SneakermeshActivity extends Activity implements Logger
         super.onResume();
         // The activity has become visible (it is now "resumed").
         
-        startService(serviceIntent);                        
         doBindService();
     }    
     

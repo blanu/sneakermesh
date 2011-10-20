@@ -45,6 +45,7 @@ abstract public class SneakermeshListActivity extends ListActivity implements Lo
         REFRESH_ACTION=this.getPackageName()+".refresh";        
         
         serviceIntent=new Intent(this, LANProbeService.class);        
+        startService(serviceIntent);                        
     }
     
     @Override
@@ -52,7 +53,6 @@ abstract public class SneakermeshListActivity extends ListActivity implements Lo
         super.onResume();
         // The activity has become visible (it is now "resumed").
         
-        startService(serviceIntent);                        
         registerReceiver(broadcastReceiver, new IntentFilter(REFRESH_ACTION));        
         doBindService();
     }       
