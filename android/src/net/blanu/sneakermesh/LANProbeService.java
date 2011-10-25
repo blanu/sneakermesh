@@ -31,20 +31,14 @@ public class LANProbeService extends Service implements Logger
 		super.onCreate();
 		BROADCAST_ACTION=this.getPackageName()+".log";
     	intent = new Intent(BROADCAST_ACTION);	
-		log("LANProbeService.onCreate");
 	}
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-    	log("Started");
-
     	if(mesh==null)
     	{
-    		log("Fresh mesh");
     		if(checkStorage())
     		{
-    			log("New mesh");
-
     			mesh=new AndroidSneakermesh(this);
     			
     			try
@@ -60,10 +54,6 @@ public class LANProbeService extends Service implements Logger
     			probe=new LANProbe(mesh);
     			probe.start();
     		}
-    	}
-    	else
-    	{
-    		log("singleton!");
     	}
     	
     	return START_STICKY;
@@ -88,8 +78,13 @@ public class LANProbeService extends Service implements Logger
 	@Override
 	public void onDestroy() {		
 		super.onDestroy();
-		log("LANProbeService.onDestroy");
 	}	    
+	
+	public void forceSync()
+	{
+		mesh=null;
+		onStartCommand(null, 0, 0);
+	}
     
     public void log(String s)
     {

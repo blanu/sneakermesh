@@ -31,7 +31,17 @@ import android.widget.Toast;
 public class MessageListActivity extends SneakermeshListActivity implements Logger
 {
 	private static final String TAG="MessageListActivity";
-	        
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        
+        if(probe!=null && !probe.getMesh().isPasswordSet())
+        {
+        	launchPassword();
+        }
+    }       
+	
     protected void refreshUI()
     {
     	probe.getMesh().loadHashes();
@@ -43,9 +53,8 @@ public class MessageListActivity extends SneakermeshListActivity implements Logg
     	for(Message msg : msgs)
     	{
     		TextMessage tm=(TextMessage)msg;
-    		adapter.add(tm.text);
+    		adapter.add(tm.getText());
     	}
-    	log("NOTIFY DATA SET CHANGED");
     	adapter.notifyDataSetChanged();
     }
     
@@ -57,7 +66,7 @@ public class MessageListActivity extends SneakermeshListActivity implements Logg
     	for(Message msg : msgs)
     	{
     		TextMessage tm=(TextMessage)msg;
-    		adapter.add(tm.text);
+    		adapter.add(tm.getText());
     	}
         setListAdapter(adapter);
         

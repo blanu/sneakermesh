@@ -10,4 +10,6 @@
           android:title="@string/addphoto" />            
     <item android:id="@+id/destroy"
           android:title="@string/destroy" />            
+    <item android:id="@+id/sync"
+          android:title="@string/sync" />            
 </menu>

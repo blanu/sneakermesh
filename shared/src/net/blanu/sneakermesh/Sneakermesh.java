@@ -16,22 +16,46 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-abstract public class Sneakermesh
+abstract public class Sneakermesh implements Logger
 {
 	private static final String TAG = "Sneakermesh";
+	
+	private String password=null;
 
 	Set<String> have;
 	private Set<String> want;
 	
 	private BlockingQueue<Command> queue;
 	
-	protected File root;	
+	protected File root;
+	protected File tmp;
+	protected File texts;
 	
 	public Sneakermesh(File f)
 	{
 		root=f;
 		log("root: "+f);
 		GiveCommand.root=f;
+		
+		Command.setLogger(this);
+		
+		if(!root.exists())
+		{
+			root.mkdirs();
+		}
+		
+		tmp=new File(root, "tmp");
+		if(!tmp.exists())
+		{
+			tmp.mkdirs();
+		}
+		Message.setTmp(tmp);
+		
+		texts=new File(root, "texts");
+		if(!texts.exists())
+		{
+			texts.mkdirs();
+		}
 		
         have=new HashSet<String>();
         want=new HashSet<String>();
@@ -40,7 +64,17 @@ abstract public class Sneakermesh
         loadHashes();
 	}
 	
-	abstract void log(String s);
+	public abstract void log(String s);
+	
+	public void setPassword(String s)
+	{
+		password=s;
+	}
+	
+	public boolean isPasswordSet()
+	{
+		return password!=null;
+	}
 	
 	public void sync(Socket sock, boolean pushHave)
 	{
@@ -56,6 +90,7 @@ abstract public class Sneakermesh
 			Thread writer=new WriteSync(out);
 			writer.start();
 			
+			/*
 			try {
 				reader.join();
 			} catch (InterruptedException e) {
@@ -69,8 +104,7 @@ abstract public class Sneakermesh
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
-			log("done send");			
+			*/
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -94,7 +128,7 @@ abstract public class Sneakermesh
 				Command msg=Command.readCommand(is);
 				while(msg!=null)
 				{
-					log("command: "+msg);
+					log("read command: "+msg);
 					try
 					{
 						execute(msg);
@@ -129,10 +163,12 @@ abstract public class Sneakermesh
 			{
 				while(true)
 				{
-					log("writesync");
+					log("waiting for something to write");
 					Command msg=queue.take();
-					log("outgoing message: "+msg);
+					log("writing: "+msg);
 					msg.write(out);
+					out.flush();
+					log("wrote");
 				}
 			}
 			catch(Exception e)
@@ -145,11 +181,11 @@ abstract public class Sneakermesh
 
 	public void loadHashes()
 	{
-		if(root==null)
+		if(texts==null)
 		{
 			return;
 		}
-		String[] files=root.list();
+		String[] files=texts.list();
 		if(files==null)
 		{
 			return;
@@ -165,7 +201,7 @@ abstract public class Sneakermesh
 				
 				for(int x=0; x<files.length; x++)
 				{
-					File f=new File(root, files[x]);
+					File f=new File(texts, files[x]);
 					if(f.length()>0)
 					{
 						log("I have: "+files[x]);
@@ -181,7 +217,7 @@ abstract public class Sneakermesh
 		}		
 	}
 	
-	private void execute(Command msg) throws IOException
+	private void execute(Command msg) throws IOException, InterruptedException
 	{
 		log("executing msg");
 		if(msg instanceof HaveCommand)
@@ -249,21 +285,26 @@ abstract public class Sneakermesh
 		}
 	}	
 
-	private void execute(GiveCommand cmd) throws IOException
+	private void execute(GiveCommand cmd) throws IOException, InterruptedException
 	{	
 		log("executing give: "+cmd);
-		cmd.msg.save(root);
+		if(cmd.msg.type==Message.MSG_TEXT)
+		{
+			cmd.msg.save(texts);
+		}
 
 		synchronized(want)
 		{
 			want.remove(cmd.digest);
 			log("now want: "+want.size());
+			queue.put(new WantCommand(new HashSet<String>(want)));
 		}
 		
 		synchronized(have)
 		{
 			have.add(cmd.digest);
 			log("now have: "+have.size());
+			queue.put(new HaveCommand(new HashSet<String>(have)));
 			fireHaveChangeEvent(cmd.digest);
 		}
 	}
@@ -281,8 +322,9 @@ abstract public class Sneakermesh
 	
 	public void addMessage(Message msg) throws IOException
 	{
+		log("saving "+msg.file+" to "+texts+"/"+msg.digest);
 		String digest=msg.digest;
-		msg.save(root);
+		msg.save(texts);
 		
 		synchronized(have)
 		{
@@ -366,15 +408,13 @@ abstract public class Sneakermesh
 		{
 			for(String digest : have)
 			{
-				File file=new File(root, digest);
+				File file=new File(texts, digest);
 				long size=file.length();
 				if(file.exists() && size>0)
 				{
 					try
 					{
-						FileInputStream fis=new FileInputStream(file);
-						DataInputStream dis=new DataInputStream(fis);
-						TextMessage msg=(TextMessage)Message.readMessage(dis);
+						TextMessage msg=(TextMessage)Message.readMessage(file);
 						msgs.add(msg);
 					}
 					catch(Exception e)
@@ -395,11 +435,11 @@ abstract public class Sneakermesh
 	}
 
 	public void deleteMessages() {
-		if(root==null)
+		if(texts==null)
 		{
 			return;
 		}
-		String[] files=root.list();
+		String[] files=texts.list();
 		if(files==null)
 		{
 			return;
@@ -416,7 +456,7 @@ abstract public class Sneakermesh
 				
 		for(int x=0; x<files.length; x++)
 		{
-			File f=new File(root, files[x]);
+			File f=new File(texts, files[x]);
 			f.delete();
 		}		
 	}		

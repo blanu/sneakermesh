@@ -90,6 +90,9 @@ abstract public class SneakermeshListActivity extends ListActivity implements Lo
         case R.id.addphoto:
         	launchPhoto();
         	return true;        	
+        case R.id.sync:
+        	forceSync();
+        	return true;        	        	        	
         default:
             return super.onOptionsItemSelected(item);
         }
@@ -121,6 +124,18 @@ abstract public class SneakermeshListActivity extends ListActivity implements Lo
     	log("Launching photo activity");
     	Intent intent=new Intent(this, AddPhotoActivity.class);
     	startActivity(intent);
+    }    
+
+    protected void launchPassword()
+    {
+    	log("Launching password activity");
+    	Intent intent=new Intent(this, EnterPasswordActivity.class);
+    	startActivity(intent);
+    }        
+    
+    protected void forceSync()
+    {
+    	probe.forceSync();
     }    
     
     public void log(String logline)

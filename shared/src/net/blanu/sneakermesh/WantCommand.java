@@ -34,7 +34,7 @@ public class WantCommand extends Command {
 			
 		for(String msg : want)
 		{
-			out.write(msg.getBytes());				
+			writeDigest(msg, out);				
 		}	    	
 	}
 	

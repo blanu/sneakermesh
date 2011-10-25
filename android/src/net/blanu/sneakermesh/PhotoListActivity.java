@@ -43,7 +43,7 @@ public class PhotoListActivity extends SneakermeshListActivity implements Logger
     	for(Message msg : msgs)
     	{
     		TextMessage tm=(TextMessage)msg;
-    		adapter.add(tm.text);
+    		adapter.add(tm.getText());
     	}
     	log("NOTIFY DATA SET CHANGED");
     	adapter.notifyDataSetChanged();
@@ -57,7 +57,7 @@ public class PhotoListActivity extends SneakermeshListActivity implements Logger
     	for(Message msg : msgs)
     	{
     		TextMessage tm=(TextMessage)msg;
-    		adapter.add(tm.text);
+    		adapter.add(tm.getText());
     	}
         setListAdapter(adapter);
         

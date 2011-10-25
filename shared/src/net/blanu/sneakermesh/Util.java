@@ -16,6 +16,8 @@ import java.security.SecureRandom;
 import java.util.Formatter;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -135,7 +137,7 @@ public class Util
 		}
 	}
 	
-    static String asHex(byte[] hash) {
+    public static String asHex(byte[] hash) {
         Formatter formatter = new Formatter();
         for (byte b : hash) {
             formatter.format("%02x", b);
@@ -143,15 +145,44 @@ public class Util
         return formatter.toString();
     }	
 		
-	public static byte[] encrypt(String password, String plaintext) throws Exception {
+    public static byte[] asBytes(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                                 + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+    
+	public static InputStream encrypt(String password, InputStream plaintext) throws Exception {
 		return crypt(password, plaintext, Cipher.ENCRYPT_MODE);
 	}
 	
-	public static byte[] decrypt(String password, String plaintext) throws Exception {
-		return crypt(password, plaintext, Cipher.DECRYPT_MODE);
+	public static InputStream decrypt(String password, InputStream ciphertext) throws Exception {
+		return crypt(password, ciphertext, Cipher.DECRYPT_MODE);
 	}
 	
-	public static byte[] crypt(String password, String plaintext, int mode) throws Exception {
+	public static InputStream crypt(String password, InputStream text, int mode) throws Exception
+	{
+        return new CipherInputStream(text, makeCipher(password, mode));
+    }		
+
+	public static OutputStream encrypt(String password, OutputStream plaintext) throws Exception {
+		return crypt(password, plaintext, Cipher.ENCRYPT_MODE);
+	}
+	
+	public static OutputStream decrypt(String password, OutputStream ciphertext) throws Exception {
+		return crypt(password, ciphertext, Cipher.DECRYPT_MODE);
+	}
+	
+	public static OutputStream crypt(String password, OutputStream text, int mode) throws Exception
+	{
+        return new CipherOutputStream(text, makeCipher(password, mode));
+    }			
+	
+	public static Cipher makeCipher(String password, int mode) throws Exception
+	{
         KeyGenerator keygen = KeyGenerator.getInstance("AES");
         SecureRandom secrand = SecureRandom.getInstance("SHA1PRNG");
         secrand.setSeed(password.getBytes());
@@ -162,10 +193,7 @@ public class Util
 
         SecretKeySpec skeySpec = new SecretKeySpec(rawKey, "AES");
         Cipher cipher = Cipher.getInstance("AES");
-
         cipher.init(mode, skeySpec);
-        byte[] encrypted = cipher.doFinal(plaintext.getBytes());
-
-        return encrypted;
-    }		
+        return cipher;
+	}	    
 }

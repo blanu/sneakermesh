@@ -76,6 +76,9 @@ public class SneakermeshActivity extends Activity implements Logger
         case R.id.destroy:
         	selfDestruct();
         	return true;        	
+        case R.id.sync:
+        	forceSync();
+        	return true;        	        	
         default:
             return super.onOptionsItemSelected(item);
         }
@@ -108,6 +111,11 @@ public class SneakermeshActivity extends Activity implements Logger
     	Intent intent=new Intent(this, AddPhotoActivity.class);
     	startActivity(intent);
     }    
+    
+    protected void forceSync()
+    {
+    	probe.forceSync();
+    }
     
     public void selfDestruct()
     {

@@ -11,11 +11,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
+import java.util.Date;
+import java.util.Random;
 
 public abstract class Message implements Comparable<Message>
 {
 	protected static final int MSG_TEXT=0;
 	protected static final int MSG_PHOTO=1;
+	
+	protected static Random random=new Random();
+	protected static File tmp;
 	
 	public int type;
 	public long timestamp;
@@ -26,6 +31,11 @@ public abstract class Message implements Comparable<Message>
 	public int compareTo(Message m)
 	{
 		return new Long(timestamp).compareTo(new Long(m.timestamp));
+	}
+	
+	public static void setTmp(File f)
+	{
+		tmp=f;
 	}
 	
 	public static Message readMessage(DataInputStream is) throws IOException
@@ -73,12 +83,25 @@ public abstract class Message implements Comparable<Message>
 		timestamp=ts;
 		size=num;
 		
-		File file=File.createTempFile("sneakermesh", "tmp");
+		file=createTempFile();
 		FileOutputStream out=new FileOutputStream(file);
 		digest=Util.pump(is, out, num);	
 		out.close();
 		file.setLastModified(timestamp);		
 	}	
+	
+	static protected File createTempFile() throws IOException
+	{
+		if(tmp==null)
+		{
+			return File.createTempFile("sneakermesh", "tmp");		
+		}
+		else
+		{
+			String filename=String.valueOf(new Date().getTime())+"."+String.valueOf(random.nextInt());
+			return new File(tmp, filename);
+		}
+	}
 	
 	public Message(int t, long ts, int num, File f) throws IOException
 	{

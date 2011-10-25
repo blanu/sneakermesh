@@ -11,11 +11,15 @@ public class HaveCommand extends Command {
 	
 	static public HaveCommand read(DataInputStream is) throws IOException
 	{
+		System.out.println("reading have");
 		Set<String>peerHas=new HashSet<String>();
 		int num=is.read();
+		System.out.println("num: "+num);
 		for(int x=0; x<num; x++)
 		{
+			System.out.println("reading "+x+" of "+num);
 			String digest=readDigest(is);
+			System.out.println("peer has: "+digest);
 			peerHas.add(digest);
 		}
 		
@@ -34,7 +38,7 @@ public class HaveCommand extends Command {
 			
 		for(String msg : have)
 		{
-			out.write(msg.getBytes());				
+			writeDigest(msg, out);				
 		}	    	
 	}
 	

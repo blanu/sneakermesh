@@ -31,10 +31,8 @@ public class AndroidSneakermesh extends Sneakermesh
 	
 	public void fireHaveChangeEvent(String digest)
 	{
-		log("fireHaveChangeEvent android");
 		String REFRESH_ACTION=probe.getPackageName()+".refresh";
     	Intent intent = new Intent(REFRESH_ACTION);		
-    	log("broadcasting "+REFRESH_ACTION);
     	probe.sendBroadcast(intent);
     }	
 }

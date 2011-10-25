@@ -49,15 +49,14 @@ public class LogViewerActivity extends SneakermeshActivity
     }
     
     private void updateUI(Intent intent) {
-    	Log.e(TAG, "updateUI");
     	String logline = intent.getStringExtra("logline"); 
-    	Log.e(TAG, logline);
     	log(logline);
     }
     
     public void log(String logline)
     {
-    	TextView text=(TextView)findViewById(R.id.textview);
+       	Log.e(TAG, logline);
+       	TextView text=(TextView)findViewById(R.id.textview);
     	if(text!=null && logline!=null)
     	{
     		text.append(logline);

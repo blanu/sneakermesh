@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public abstract class Command implements Comparable<Command>
 {
@@ -12,14 +13,35 @@ public abstract class Command implements Comparable<Command>
 	protected static final int CMD_GIVE=2;
 	protected static final int CMD_DONE=3;	
 	
+	protected static Logger logger=null;
+	
 	public int compareTo(Command obj)
 	{
 		return 0;
 	}
 	
+	static public void log(String s)
+	{
+		if(logger!=null)
+		{
+			logger.log(s);
+		}
+		else
+		{
+			System.out.println(s);
+		}
+	}
+	
+	static public void setLogger(Logger l)
+	{
+		logger=l;
+	}
+	
 	public static Command readCommand(DataInputStream is) throws IOException
 	{
+		log("reading peerCmd");
 		int peerCmd=is.read();
+		log("peerCmd: "+peerCmd);
 
 		switch(peerCmd)
 		{
@@ -34,16 +56,21 @@ public abstract class Command implements Comparable<Command>
 		case CMD_DONE:
 			return DoneCommand.read(is);
 		default:
-			System.out.println("Unknown command: "+peerCmd);
+			log("Unknown command: "+peerCmd);
 			return null;
 		}
 	}
 	
 	static protected String readDigest(InputStream is)
 	{
-		byte[] digest=fillBuffer(is, (512/8)*2);
-		return new String(digest);
+		byte[] digest=fillBuffer(is, 20); // SHA-1 is 20 bytes
+		return Util.asHex(digest);
 	}    
+	
+	static protected void writeDigest(String s, OutputStream out) throws IOException
+	{
+		out.write(Util.asBytes(s));
+	}
 
 	static protected byte[] fillBuffer(InputStream is, int size)
 	{

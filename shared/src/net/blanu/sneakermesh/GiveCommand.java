@@ -33,14 +33,14 @@ public class GiveCommand extends Command {
 	public GiveCommand(String s) throws IOException
 	{
 		digest=s;
-		File f=new File(root, digest);
+		File f=new File(new File(root, "texts"), digest);
 		msg=Message.readMessage(f);
 	}
 
 	public void write(DataOutputStream out) throws IOException
 	{
 		out.write(CMD_GIVE);		
-		out.write(digest.getBytes());
+		writeDigest(digest, out);				
 		msg.write(out);
 	}
 	

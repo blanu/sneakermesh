@@ -28,16 +28,28 @@ public class LANProbe extends Thread
     	log("Started");        
         log("resumed");
         
-        String ip=getLocalIpAddress();
-        if(ip==null)
+        List<String> ips=getLocalIpAddresses();
+        if(ips==null)
         {
         	log("null");        	
         }
         else
         {
-        	log("my ip: "+ip);
-        	
-        	probeNetwork(ip);
+        	log("my ips: "+ips);
+
+        	while(true)
+        	{
+        		for(String ip : ips)
+        		{
+        			log("probing: "+ip);
+        			probeNetwork(ip);
+        			try {
+        				sleep(30000); // 30 seconds
+        			} catch (InterruptedException e) {
+        				e.printStackTrace();
+        			}
+        		}
+        	}
         }
     }
     
@@ -46,7 +58,7 @@ public class LANProbe extends Thread
     	mesh.log(s);
     }
     
-    private String getLocalIpAddress() {
+    private List<String> getLocalIpAddresses() {
     	List<String>addrs=new ArrayList<String>();
     	
         try {
@@ -65,7 +77,7 @@ public class LANProbe extends Thread
         }
 
         System.out.println("addrs: "+addrs);
-        return addrs.get(addrs.size()-1);
+        return addrs;
     }    
     
     private void probeNetwork(String ip)

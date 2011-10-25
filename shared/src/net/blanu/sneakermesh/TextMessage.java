@@ -16,8 +16,6 @@ import java.util.Set;
 
 public class TextMessage extends Message
 {
-	public String text;
-	
 	public TextMessage(long ts, int num, InputStream is) throws IOException
 	{
 		super(MSG_TEXT, ts, num, is);
@@ -55,6 +53,6 @@ public class TextMessage extends Message
 			
 	public String toString()
 	{
-		return "[Text: "+file.length()+"]";
+		return "[Text]";
 	}
 }
