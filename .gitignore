@@ -8,4 +8,6 @@ shared/bin/**/*
 *.class
 .metadata/**/*
 .metadata
+gen/*
+gen/**/*
 
