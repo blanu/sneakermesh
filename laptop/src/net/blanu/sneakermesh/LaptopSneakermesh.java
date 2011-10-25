@@ -4,16 +4,31 @@ import java.io.File;
 
 public class LaptopSneakermesh extends Sneakermesh implements Logger
 {
-	public LaptopSneakermesh() {
-		super(new File(new File(new File(System.getProperty("user.home")), "sneakermesh"), "sneakermesh"));
+	static protected File getRoot(String s)
+	{
+		File parent=null;
 		
-		if(!root.exists())
+		if(s==null)
 		{
-			root.mkdir();
-			loadHashes();
+			File home=new File(System.getProperty("user.home"));
+			parent=new File(home, "sneakermesh");
 		}
+		else
+		{
+			parent=new File(s);			
+		}
+		
+		return new File(parent, "sneakermesh");
+	}
+	
+	public LaptopSneakermesh() {
+		this(null);
 	}
 
+	public LaptopSneakermesh(String s) {
+		super(getRoot(s));
+	}	
+	
 	public void log(String s)
 	{
 		System.out.println(s);
