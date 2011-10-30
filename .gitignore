@@ -8,6 +8,6 @@ shared/bin/**/*
 *.class
 .metadata/**/*
 .metadata
-gen/*
-gen/**/*
+android/gen/*
+android/gen/**/*
 
