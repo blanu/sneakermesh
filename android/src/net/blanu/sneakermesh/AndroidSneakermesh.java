@@ -19,6 +19,9 @@ public class AndroidSneakermesh extends Sneakermesh
 		}
 		
 		probe=p;
+		
+		Message.setLogger(this);
+		Util.setLogger(this);
 	}
 	
 	public void log(String s)

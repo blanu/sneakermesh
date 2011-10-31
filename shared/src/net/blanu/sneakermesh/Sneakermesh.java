@@ -435,8 +435,10 @@ abstract public class Sneakermesh implements Logger
 	}
 
 	public void deleteMessages() {
+		log("mesh.deleteMessages()");
 		if(texts==null)
 		{
+			log("No texts to delete...");
 			return;
 		}
 		String[] files=texts.list();
@@ -444,20 +446,16 @@ abstract public class Sneakermesh implements Logger
 		{
 			return;
 		}
-
-		synchronized(have)
-		{
-			synchronized(want)
-			{
-				have.clear();
-				want.clear();
-			}
-		}
 				
 		for(int x=0; x<files.length; x++)
 		{
 			File f=new File(texts, files[x]);
 			f.delete();
+		}		
+		
+		synchronized(have)
+		{
+			have.clear();
 		}		
 	}		
 }

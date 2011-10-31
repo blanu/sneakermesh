@@ -22,11 +22,30 @@ public abstract class Message implements Comparable<Message>
 	protected static Random random=new Random();
 	protected static File tmp;
 	
+	public static Logger logger=null;
+	
 	public int type;
 	public long timestamp;
 	public int size;	
 	public File file;
 	public String digest;
+	
+	static public void setLogger(Logger l)
+	{
+		logger=l;
+	}
+	
+	static public void log(String s)
+	{
+		if(logger==null)
+		{
+			System.out.println(s);
+		}
+		else
+		{
+			logger.log(s);
+		}
+	}
 		
 	public int compareTo(Message m)
 	{
@@ -41,6 +60,7 @@ public abstract class Message implements Comparable<Message>
 	public static Message readMessage(DataInputStream is) throws IOException
 	{
 		int msgType=is.read();
+		log("msgType: "+msgType);
 
 		long ts=is.readLong();
 		System.out.println("timestamp: "+ts);

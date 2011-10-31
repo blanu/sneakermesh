@@ -24,6 +24,25 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Util
 {
+	static protected Logger logger=null;
+	
+	static public void setLogger(Logger l)
+	{
+		logger=l;
+	}
+	
+	static void log(String s)
+	{
+		if(logger==null)
+		{
+			System.out.println(s);
+		}
+		else
+		{
+			logger.log(s);			
+		}
+	}
+	
 	static protected String readDigest(InputStream is)
 	{
 		byte[] digest=fillBuffer(is, (512/8)*2);
@@ -124,7 +143,7 @@ public class Util
 				e.printStackTrace();
 		}
 		
-		System.out.println("pump read "+count+" of "+maxlen);
+		log("pump read "+count+" of "+maxlen);
 
 		if(sha1==null)
 		{
@@ -195,5 +214,5 @@ public class Util
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(mode, skeySpec);
         return cipher;
-	}	    
+	}	    	
 }
