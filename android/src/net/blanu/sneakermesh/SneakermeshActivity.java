@@ -67,9 +67,6 @@ public class SneakermeshActivity extends Activity implements Logger
         case R.id.list:
         	launchList();
             return true;
-        case R.id.add:
-        	launchAdd();
-        	return true;
         case R.id.addphoto:
         	launchPhoto();
         	return true;
@@ -96,14 +93,7 @@ public class SneakermeshActivity extends Activity implements Logger
     	log("Launching list activity");
     	Intent intent=new Intent(this, MessageListActivity.class);
     	startActivity(intent);
-    }
-    
-    protected void launchAdd()
-    {
-    	log("Launching add activity");
-    	Intent intent=new Intent(this, AddMessageActivity.class);
-    	startActivity(intent);
-    }    
+    }  
     
     protected void launchPhoto()
     {

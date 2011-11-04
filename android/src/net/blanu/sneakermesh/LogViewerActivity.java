@@ -59,8 +59,7 @@ public class LogViewerActivity extends SneakermeshActivity
        	TextView text=(TextView)findViewById(R.id.textview);
     	if(text!=null && logline!=null)
     	{
-    		text.append(logline);
-    		text.append("\n");
+    		text.setText(logline);
     	}
     	else
     	{

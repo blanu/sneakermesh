@@ -103,7 +103,7 @@ public class LANProbe extends Thread
     	for(String target : targets)
     	{
     		parts[3]=target;
-    		testing.add(join(parts, "."));
+    		testing.add(Util.join(parts, "."));
     	}
     	
     	BlockingQueue<Socket> results=new LinkedBlockingQueue<Socket>();
@@ -133,22 +133,4 @@ public class LANProbe extends Thread
     		mesh.sync(peer,  true);
     	}
     }
-        
-	private static String join(String[] s, String delim)
-	{
-		if(s.length==0)
-		{
-			return "";
-		}
-
-		StringBuffer buffer = new StringBuffer();
-		for(int i=0; i<s.length-1; i++)
-		{
-			buffer.append(s[i]);
-			buffer.append(delim);
-		}
-		buffer.append(s[s.length-1]);
-
-		return buffer.toString();
-	}
 }

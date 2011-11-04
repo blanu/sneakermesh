@@ -18,10 +18,7 @@ public class AndroidSneakermesh extends Sneakermesh
 			Log.e(TAG, "null extdir: "+p.getExternalFilesDir(null));
 		}
 		
-		probe=p;
-		
-		Message.setLogger(this);
-		Util.setLogger(this);
+		probe=p;		
 	}
 	
 	public void log(String s)

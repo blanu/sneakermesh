@@ -215,4 +215,22 @@ public class Util
         cipher.init(mode, skeySpec);
         return cipher;
 	}	    	
+	
+	public static String join(String[] s, String delim)
+	{
+		if(s.length==0)
+		{
+			return "";
+		}
+
+		StringBuffer buffer = new StringBuffer();
+		for(int i=0; i<s.length-1; i++)
+		{
+			buffer.append(s[i]);
+			buffer.append(delim);
+		}
+		buffer.append(s[s.length-1]);
+
+		return buffer.toString();
+	}	
 }

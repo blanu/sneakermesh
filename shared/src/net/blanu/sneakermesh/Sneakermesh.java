@@ -34,7 +34,6 @@ abstract public class Sneakermesh implements Logger
 	public Sneakermesh(File f)
 	{
 		root=f;
-		log("root: "+f);
 		GiveCommand.root=f;
 		
 		Command.setLogger(this);
@@ -78,7 +77,6 @@ abstract public class Sneakermesh implements Logger
 	
 	public void sync(Socket sock, boolean pushHave)
 	{
-		log("sync");
 		try {
 			DataInputStream is=new DataInputStream(sock.getInputStream());
 			DataOutputStream out = new DataOutputStream(sock.getOutputStream());
@@ -168,7 +166,6 @@ abstract public class Sneakermesh implements Logger
 					log("writing: "+msg);
 					msg.write(out);
 					out.flush();
-					log("wrote");
 				}
 			}
 			catch(Exception e)
@@ -204,12 +201,10 @@ abstract public class Sneakermesh implements Logger
 					File f=new File(texts, files[x]);
 					if(f.length()>0)
 					{
-						log("I have: "+files[x]);
 						have.add(files[x]);
 					}
 					else
 					{
-						log("I want: "+files[x]);
 						want.add(files[x]);
 					}
 				}
@@ -219,7 +214,6 @@ abstract public class Sneakermesh implements Logger
 	
 	private void execute(Command msg) throws IOException, InterruptedException
 	{
-		log("executing msg");
 		if(msg instanceof HaveCommand)
 		{
 			execute((HaveCommand)msg);
@@ -236,15 +230,12 @@ abstract public class Sneakermesh implements Logger
 
 	private void execute(HaveCommand msg)
 	{
-		log("executing have");
 		Set<String> available=new HashSet<String>(msg.have);		
 
-		log("entering sync");
 		synchronized(have)
 		{
 			synchronized(want)
 			{
-				log("entered sync");
 				available.removeAll(have);
 				log("available: "+available.size());
 				want.addAll(available);
@@ -253,7 +244,6 @@ abstract public class Sneakermesh implements Logger
 				if(want.size()>0)
 				{
 					try {
-						log("loading queue");
 						queue.put(new WantCommand(new HashSet<String>(want)));
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
@@ -287,9 +277,9 @@ abstract public class Sneakermesh implements Logger
 
 	private void execute(GiveCommand cmd) throws IOException, InterruptedException
 	{	
-		log("executing give: "+cmd);
 		if(cmd.msg.type==Message.MSG_TEXT)
 		{
+			log("saving text");
 			cmd.msg.save(texts);
 		}
 
@@ -299,7 +289,7 @@ abstract public class Sneakermesh implements Logger
 			log("now want: "+want.size());
 			queue.put(new WantCommand(new HashSet<String>(want)));
 		}
-		
+
 		synchronized(have)
 		{
 			have.add(cmd.digest);
@@ -322,7 +312,6 @@ abstract public class Sneakermesh implements Logger
 	
 	public void addMessage(Message msg) throws IOException
 	{
-		log("saving "+msg.file+" to "+texts+"/"+msg.digest);
 		String digest=msg.digest;
 		msg.save(texts);
 		
@@ -396,8 +385,6 @@ abstract public class Sneakermesh implements Logger
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
-		
-		log("pump read "+count+" of "+maxlen);
 	}
 
 	public List<Message> getMessages()
@@ -428,14 +415,11 @@ abstract public class Sneakermesh implements Logger
 				}
 			}
 		}
-		
-		log("getMessages: "+have.size()+" / "+msgs.size());
-		
+				
 		return msgs;
 	}
 
 	public void deleteMessages() {
-		log("mesh.deleteMessages()");
 		if(texts==null)
 		{
 			log("No texts to delete...");

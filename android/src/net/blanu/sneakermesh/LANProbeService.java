@@ -1,6 +1,8 @@
 package net.blanu.sneakermesh;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
@@ -9,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Collections;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Service;
 import android.content.Context;
@@ -30,11 +34,16 @@ public class LANProbeService extends Service implements Logger
 	static Intent intent;
     private final IBinder mBinder = new LocalBinder();
     
+    List<String> lines=new ArrayList<String>();
+    
 	@Override
 	public void onCreate() {
 		super.onCreate();
 		BROADCAST_ACTION=this.getPackageName()+".log";
     	intent = new Intent(BROADCAST_ACTION);	
+    	
+		Message.setLogger(this);
+		Util.setLogger(this);    	
 	}
 
     @Override
@@ -44,6 +53,9 @@ public class LANProbeService extends Service implements Logger
     		if(checkStorage())
     		{
     			mesh=new AndroidSneakermesh(this);
+    			
+    			Timer timer = new Timer();
+    			timer.scheduleAtFixedRate(new UDPBroadcast(), 1, 30*1000);
     			
     			try
     			{
@@ -56,7 +68,7 @@ public class LANProbeService extends Service implements Logger
     			}
     			
     			try {
-					probe=new UDPLANProbe(mesh, getBroadcastAddress());
+					probe=new UDPLANProbe(mesh, getBroadcastAddress(), false);
 	    			probe.start();
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -65,6 +77,32 @@ public class LANProbeService extends Service implements Logger
     	}
     	
     	return START_STICKY;
+    }
+    
+    private class UDPBroadcast extends TimerTask
+    {
+		@Override
+		public void run()
+		{
+			InetAddress ip;
+			try {
+				ip = getBroadcastAddress();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+				return;
+			}
+	    	log("broadcasting to: "+ip);
+	        DatagramSocket socket;
+			try {
+				socket = new DatagramSocket();
+		        socket.setBroadcast(true);
+		        String data="\0x00";
+		        DatagramPacket packet = new DatagramPacket(data.getBytes(), data.length(), ip, 11917);
+		        socket.send(packet);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}			
+		}
     }
     
     public Sneakermesh getMesh()
@@ -98,7 +136,13 @@ public class LANProbeService extends Service implements Logger
     {
     	Log.e(TAG, s);
     	
-    	intent.putExtra("logline", s);
+    	lines.add(s);
+    	if(lines.size()>30)
+    	{
+    		lines.remove(0);
+    	}
+
+    	intent.putExtra("logline", Util.join((String[])lines.toArray(new String[0]), "\n"));
     	sendBroadcast(intent);    	    	
     }
                    

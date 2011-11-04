@@ -9,9 +9,11 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Collections;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -21,26 +23,38 @@ public class UDPLANProbe extends Thread
 	private static final int MAX_PROBES=10;
 	Sneakermesh mesh;
 	InetAddress broadcastAddress;
+	ListenThread listener;
+	SyncThread syncer;
+	Set<InetAddress> peers=new HashSet<InetAddress>();
+	boolean broadcast=false;
 		
-	public UDPLANProbe(Sneakermesh sm, InetAddress ia)
+	public UDPLANProbe(Sneakermesh sm, InetAddress ia, boolean b)
 	{
 		mesh=sm;
 		broadcastAddress=ia;
+		broadcast=b;
 	}
 
 	public void run()
 	{        
-		new SyncThread().start();
+		listener=new ListenThread();
+		listener.start();
 		
-        while(true)
-        {
-        	probeNetwork(broadcastAddress);
-        	try {
-        		sleep(30000); // 30 seconds
-        	} catch (InterruptedException e) {
-        		e.printStackTrace();
-        	}
-        }
+		syncer=new SyncThread();
+		syncer.start();
+
+		if(broadcast)
+		{
+			while(true)
+			{
+				probeNetwork(broadcastAddress);
+				try {
+					sleep(30000); // 30 seconds
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
     
     public void log(String s)
@@ -50,7 +64,7 @@ public class UDPLANProbe extends Thread
     
     private void probeNetwork(InetAddress ip)
     {
-    	log("braodcasting to: "+ip);
+    	log("broadcasting to: "+ip);
         DatagramSocket socket;
 		try {
 			socket = new DatagramSocket();
@@ -63,11 +77,13 @@ public class UDPLANProbe extends Thread
 		}
     }
     
-    private class SyncThread extends Thread
+    private class ListenThread extends Thread
     {
     	public void run()
     	{
-    		log("running SyncThread");
+    		List<String> ips=getLocalIpAddresses();
+    		
+    		log("running ListenThread");
     		while(true)
     		{
     			DatagramSocket socket;
@@ -79,35 +95,80 @@ public class UDPLANProbe extends Thread
         			DatagramPacket packet = new DatagramPacket(buf, buf.length);
         			log("ready to receive udp broadcast");
         			socket.receive(packet);
-        			log("received udp broadcast");
+        			log("received udp broadcast from "+packet.getAddress().toString());
                 
         			InetAddress peer=packet.getAddress();
-        			Socket sock=new Socket(peer, 11917);
-        			log("syncing: "+peer);
-        			mesh.sync(sock,  true);
-    			} catch (Exception e) {
-    				e.printStackTrace();
-    				return;
-    			}
+        			if(!ips.contains(peer.toString())) // Don't connect to self
+        			{
+        				synchronized(peers)
+        				{
+        					peers.add(peer);
+        					peers.notify();
+        				}
+        			}
+        		} catch (Exception e) {
+        				e.printStackTrace();
+        				return;
+        		}
     		}
     	}
     }
         
-	private static String join(String[] s, String delim)
-	{
-		if(s.length==0)
-		{
-			return "";
-		}
+    private class SyncThread extends Thread
+    {
+    	public void run()
+    	{
+    		log("running SyncThread");
+    		
+    		Set<InetAddress> currentPeers;
+    		
+    		while(true)
+    		{	
+    			synchronized(peers)
+    			{
+    				try {
+						peers.wait();
+	    				currentPeers=new HashSet<InetAddress>(peers);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						return;
+					}
+    			}
+    			
+    			for(InetAddress peer : currentPeers)
+    			{
+        			Socket sock;
+					try {
+						sock = new Socket(peer, 11917);
+	        			log("syncing: "+peer);
+	        			mesh.sync(sock,  true);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+    			}
+    		}
+    	}
+    }
+    
+    private List<String> getLocalIpAddresses() {
+    	List<String>addrs=new ArrayList<String>();
+    	
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && !inetAddress.getHostAddress().contains(":")) {
+                    	addrs.add(inetAddress.getHostAddress().toString());
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            log(ex.toString());
+            return null;
+        }
 
-		StringBuffer buffer = new StringBuffer();
-		for(int i=0; i<s.length-1; i++)
-		{
-			buffer.append(s[i]);
-			buffer.append(delim);
-		}
-		buffer.append(s[s.length-1]);
-
-		return buffer.toString();
-	}	
+        System.out.println("addrs: "+addrs);
+        return addrs;
+    }	
 }

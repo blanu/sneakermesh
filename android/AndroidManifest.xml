@@ -18,11 +18,11 @@
         <activity android:name=".MessageListActivity"
                   android:label="@string/message_list">
         </activity>
-        <activity android:name=".AddMessageActivity"
-                  android:label="@string/add_message">
-        </activity>
         <activity android:name=".AddPhotoActivity"
                   android:label="@string/addphoto">
+        </activity>
+        <activity android:name=".EnterPasswordActivity"
+                  android:label="@string/enter_password_text">
         </activity>
         <service android:name=".LANProbeService" />
     </application>
