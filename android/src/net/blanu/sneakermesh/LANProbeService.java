@@ -14,6 +14,12 @@ import java.util.Collections;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import net.blanu.sneakermesh.content.Message;
+import net.blanu.sneakermesh.udp.SyncServer;
+import net.blanu.sneakermesh.udp.UDPBroadcastTask;
+import net.blanu.sneakermesh.udp.SyncerTask;
+import net.blanu.sneakermesh.udp.UDPUtil;
+
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -28,7 +34,9 @@ public class LANProbeService extends Service implements Logger
 {
 	private static final String TAG = "LANProbe";	
 	static Sneakermesh mesh=null;
-	static UDPLANProbe probe=null;
+	static SyncServer probe=null;
+	static UDPBroadcastTask broadcast=null;
+	static SyncerTask syncer=null;
 
 	static public String BROADCAST_ACTION;
 	static Intent intent;
@@ -43,7 +51,7 @@ public class LANProbeService extends Service implements Logger
     	intent = new Intent(BROADCAST_ACTION);	
     	
 		Message.setLogger(this);
-		Util.setLogger(this);    	
+		net.blanu.sneakermesh.Util.setLogger(this);    	
 	}
 
     @Override
@@ -53,23 +61,17 @@ public class LANProbeService extends Service implements Logger
     		if(checkStorage())
     		{
     			mesh=new AndroidSneakermesh(this);
+
+    			Timer timer = new Timer();    			
     			
-    			Timer timer = new Timer();
-    			timer.scheduleAtFixedRate(new UDPBroadcast(), 1, 30*1000);
+    			broadcast=new UDPBroadcastTask(this);    			
+    			timer.scheduleAtFixedRate(broadcast, 1, 30*1000);
     			
-    			try
-    			{
-    				SyncServer server=new SyncServer(mesh);
-    				server.start();    			
-    			}
-    			catch(Exception e)
-    			{
-    				e.printStackTrace();
-    			}
+    			syncer=new SyncerTask(mesh);    			
+    			timer.scheduleAtFixedRate(syncer, 1, 30*1000);
     			
     			try {
-					probe=new UDPLANProbe(mesh, getBroadcastAddress(), false);
-	    			probe.start();
+					probe=new SyncServer(mesh, UDPUtil.getBroadcastAddress(this));
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -77,33 +79,7 @@ public class LANProbeService extends Service implements Logger
     	}
     	
     	return START_STICKY;
-    }
-    
-    private class UDPBroadcast extends TimerTask
-    {
-		@Override
-		public void run()
-		{
-			InetAddress ip;
-			try {
-				ip = getBroadcastAddress();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-				return;
-			}
-	    	log("broadcasting to: "+ip);
-	        DatagramSocket socket;
-			try {
-				socket = new DatagramSocket();
-		        socket.setBroadcast(true);
-		        String data="\0x00";
-		        DatagramPacket packet = new DatagramPacket(data.getBytes(), data.length(), ip, 11917);
-		        socket.send(packet);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}			
-		}
-    }
+    }  
     
     public Sneakermesh getMesh()
     {
@@ -111,7 +87,7 @@ public class LANProbeService extends Service implements Logger
     }
     
     public class LocalBinder extends Binder {
-        LANProbeService getService() {
+        public LANProbeService getService() {
             return LANProbeService.this;
         }
     }    
@@ -128,9 +104,13 @@ public class LANProbeService extends Service implements Logger
 	
 	public void forceSync()
 	{
-		mesh=null;
-		onStartCommand(null, 0, 0);
+		syncer.run();
 	}
+	
+	public void forceBroadcast()
+	{
+		broadcast.run();
+	}	
     
     public void log(String s)
     {
@@ -142,7 +122,7 @@ public class LANProbeService extends Service implements Logger
     		lines.remove(0);
     	}
 
-    	intent.putExtra("logline", Util.join((String[])lines.toArray(new String[0]), "\n"));
+    	intent.putExtra("logline", net.blanu.sneakermesh.Util.join((String[])lines.toArray(new String[0]), "\n"));
     	sendBroadcast(intent);    	    	
     }
                    
@@ -166,17 +146,5 @@ public class LANProbeService extends Service implements Logger
     	}
     	
     	return mExternalStorageAvailable && mExternalStorageWriteable;
-    }
-    
-	InetAddress getBroadcastAddress() throws IOException {
-	    WifiManager wifi = (WifiManager)getSystemService(Context.WIFI_SERVICE);
-	    DhcpInfo dhcp = wifi.getDhcpInfo();
-	    // handle null somehow
-
-	    int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
-	    byte[] quads = new byte[4];
-	    for (int k = 0; k < 4; k++)
-	      quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
-	    return InetAddress.getByAddress(quads);
-	}	    
+    }    
 }

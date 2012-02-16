@@ -12,7 +12,9 @@ public class AndroidSneakermesh extends Sneakermesh
 	
 	public AndroidSneakermesh(Context p)
 	{
-		super(p.getExternalFilesDir(null));		
+		super(p.getExternalFilesDir(null));
+		setPeerDb(new AndroidPeerDb(p));
+		
 		if(root==null)
 		{
 			Log.e(TAG, "null extdir: "+p.getExternalFilesDir(null));

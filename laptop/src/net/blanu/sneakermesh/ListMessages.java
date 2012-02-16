@@ -5,6 +5,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
+import net.blanu.sneakermesh.content.Message;
+import net.blanu.sneakermesh.content.TextMessage;
+
 public class ListMessages {
 	public static void main(String[] args) throws IOException {		
 		Sneakermesh mesh=new LaptopSneakermesh();

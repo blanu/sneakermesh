@@ -2,26 +2,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="net.blanu.sneakermesh"
       android:versionCode="1"
-      android:versionName="1.0">
+      android:versionName="0.1">
     <uses-sdk android:minSdkVersion="8" />
     <uses-permission android:name="android.permission.INTERNET" /> 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>    
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>    
     <application android:icon="@drawable/icon" android:label="@string/app_name">
-        <activity android:name=".LogViewerActivity"
+        <activity android:name=".ui.LogViewerActivity"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MessageListActivity"
+        <activity android:name=".ui.MessageListActivity"
                   android:label="@string/message_list">
         </activity>
-        <activity android:name=".AddPhotoActivity"
+        <activity android:name=".ui.AddPhotoActivity"
                   android:label="@string/addphoto">
         </activity>
-        <activity android:name=".EnterPasswordActivity"
+        <activity android:name=".ui.EnterPasswordActivity"
                   android:label="@string/enter_password_text">
         </activity>
         <service android:name=".LANProbeService" />

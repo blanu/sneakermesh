@@ -11,5 +11,6 @@
     <string name="destroy">Destroy</string>
     <string name="takephoto">Take Photo</string>
     <string name="sync">Sync</string>
+    <string name="broadcast">Broadcast</string>
     <string name="enter_password_text">Enter password</string>
 </resources>

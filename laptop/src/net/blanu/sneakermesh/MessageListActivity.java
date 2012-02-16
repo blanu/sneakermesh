@@ -7,6 +7,9 @@ import java.io.IOException;
 import javax.swing.*;
 import javax.swing.event.*;
 
+import net.blanu.sneakermesh.content.Message;
+import net.blanu.sneakermesh.content.TextMessage;
+
 import java.util.Collections;
 import java.util.List;
  

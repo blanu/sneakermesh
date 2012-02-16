@@ -8,7 +8,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,24 +20,33 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import net.blanu.sneakermesh.content.Message;
+import net.blanu.sneakermesh.content.TextMessage;
+import net.blanu.sneakermesh.protocol.Command;
+import net.blanu.sneakermesh.protocol.GiveCommand;
+import net.blanu.sneakermesh.protocol.HaveCommand;
+import net.blanu.sneakermesh.protocol.PresenceCommand;
+import net.blanu.sneakermesh.protocol.WantCommand;
+
 abstract public class Sneakermesh implements Logger
 {
 	private static final String TAG = "Sneakermesh";
 	
 	private String password=null;
 
-	Set<String> have;
-	private Set<String> want;
-	
 	private BlockingQueue<Command> queue;
-	
+
+	protected PeerDb db;
 	protected File root;
 	protected File tmp;
 	protected File texts;
 	
+	DatagramSocket socket=null;
+	
 	public Sneakermesh(File f)
 	{
 		root=f;
+		
 		GiveCommand.root=f;
 		
 		Command.setLogger(this);
@@ -56,11 +69,18 @@ abstract public class Sneakermesh implements Logger
 			texts.mkdirs();
 		}
 		
-        have=new HashSet<String>();
-        want=new HashSet<String>();
-        queue=new LinkedBlockingQueue<Command>();
-        
-        loadHashes();
+		try {
+			socket=new DatagramSocket(11917);
+		} catch (SocketException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void setPeerDb(PeerDb pdb)
+	{
+		db=pdb;
+		
+        loadHashes();		        
 	}
 	
 	public abstract void log(String s);
@@ -75,107 +95,89 @@ abstract public class Sneakermesh implements Logger
 		return password!=null;
 	}
 	
-	public void sync(Socket sock, boolean pushHave)
+	public void addPeer(InetAddress peer)
 	{
-		try {
-			DataInputStream is=new DataInputStream(sock.getInputStream());
-			DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-			
-			queue.add(new HaveCommand(have));
-			
-			Thread reader=new ReadSync(is);
-			reader.start();
-			Thread writer=new WriteSync(out);
-			writer.start();
-			
-			/*
-			try {
-				reader.join();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		String peerIp=peer.toString();
+		db.addPeer(peerIp);
+	}
+	
+	public List<String> getPeers()
+	{
+		return db.getPeers();
+	}
+	
+	public void sync()
+	{			
+		try
+		{
+			while(true)
+			{
+				List<String> peers=db.getPeers();
+				for(String peer : peers)
+				{											
+					sendHaves(peer);
+					sendWants(peer);
+					sendGives(peer);
+				}					
 			}
-			
-			try {
-				writer.join();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			*/
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		}
+		catch(Exception e)
+		{
 			e.printStackTrace();
+			return;
 		}
 	}
-	
-	private class ReadSync extends Thread
+
+	private void sendHaves(String peer)
 	{
-		DataInputStream is;
-		
-		public ReadSync(DataInputStream i)
+		List<String> hashes=db.getHaveExcept("127.0.0.1", peer);
+		for(String hash : hashes)
 		{
-			is=i;
-		}
-		
-		public void run()
+			Command msg=new HaveCommand(peer, hash);
+			send(msg);
+		}			
+	}
+
+	private void sendWants(String peer)
+	{
+		List<String> hashes=db.getWantAndHave("127.0.0.1", peer);
+		for(String hash : hashes)
+		{
+			Command msg=new WantCommand(peer, hash);
+			send(msg);
+		}			
+	}
+
+	private void sendGives(String peer)
+	{
+		List<String> hashes=db.getWantAndHave(peer, "127.0.0.1");
+		for(String hash : hashes)
 		{
 			try
 			{
-				log("reading command");
-				Command msg=Command.readCommand(is);
-				while(msg!=null)
-				{
-					log("read command: "+msg);
-					try
-					{
-						execute(msg);
-					}
-					catch(Exception e)
-					{
-						e.printStackTrace();
-					}
-					log("reading command");
-					msg=Command.readCommand(is);
-				}			
+				Command msg=new GiveCommand(peer, hash);
+				send(msg);
 			}
-			catch(Exception e)
+			catch(IOException e)
 			{
 				e.printStackTrace();
 			}
-		}
-	}
-	
-	private class WriteSync extends Thread
-	{
-		DataOutputStream out;
-		
-		public WriteSync(DataOutputStream os)
-		{
-			out=os;
-		}
-		
-		public void run()
-		{			
-			try
-			{
-				while(true)
-				{
-					log("waiting for something to write");
-					Command msg=queue.take();
-					log("writing: "+msg);
-					msg.write(out);
-					out.flush();
-				}
-			}
-			catch(Exception e)
-			{
-				e.printStackTrace();
-				return;
-			}
-		}
+		}			
 	}		
 
+	private void send(Command msg)
+	{
+		DatagramSocket socket;
+		try {
+			socket = new DatagramSocket();
+			String data=msg.toString();
+			DatagramPacket packet = new DatagramPacket(data.getBytes(), data.length(), InetAddress.getByName(msg.peer), 11917);
+			socket.send(packet);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}		
+	}		
+	
 	public void loadHashes()
 	{
 		if(texts==null)
@@ -189,32 +191,30 @@ abstract public class Sneakermesh implements Logger
 		}
 		System.out.println("files: "+files);
 
-		synchronized(have)
+		db.deleteHave("127.0.0.1");
+		db.deleteWant("127.0.0.1");
+						
+		for(int x=0; x<files.length; x++)
 		{
-			synchronized(want)
+			File f=new File(texts, files[x]);
+			if(f.length()>0)
 			{
-				have.clear();
-				want.clear();
-				
-				for(int x=0; x<files.length; x++)
-				{
-					File f=new File(texts, files[x]);
-					if(f.length()>0)
-					{
-						have.add(files[x]);
-					}
-					else
-					{
-						want.add(files[x]);
-					}
-				}
+				db.putHave("127.0.0.1", files[x]);
 			}
-		}		
+			else
+			{
+				db.putWant("127.0.0.1", files[x]);
+			}
+		}
 	}
 	
-	private void execute(Command msg) throws IOException, InterruptedException
+	public void execute(Command msg) throws IOException, InterruptedException
 	{
-		if(msg instanceof HaveCommand)
+		if(msg instanceof PresenceCommand)
+		{
+			execute((PresenceCommand)msg);
+		}
+		else if(msg instanceof HaveCommand)
 		{
 			execute((HaveCommand)msg);
 		}
@@ -228,51 +228,19 @@ abstract public class Sneakermesh implements Logger
 		}
 	}
 
+	private void execute(PresenceCommand msg)
+	{
+		db.addPeer(msg.peer);
+	}
+	
 	private void execute(HaveCommand msg)
 	{
-		Set<String> available=new HashSet<String>(msg.have);		
-
-		synchronized(have)
-		{
-			synchronized(want)
-			{
-				available.removeAll(have);
-				log("available: "+available.size());
-				want.addAll(available);
-				log("now want: "+want.size());
-				
-				if(want.size()>0)
-				{
-					try {
-						queue.put(new WantCommand(new HashSet<String>(want)));
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			}
-		}
+		db.putHave(msg.peer, msg.have);
 	}
 
 	private void execute(WantCommand msg)
 	{
-		synchronized(have)
-		{
-			for(String digest : msg.want)
-			{
-				if(have.contains(digest))
-				{
-					try
-					{
-						queue.put(new GiveCommand(digest));
-					}
-					catch(Exception e)
-					{
-						e.printStackTrace();
-					}
-				}
-			}
-		}
+		db.putWant(msg.peer, msg.want);
 	}	
 
 	private void execute(GiveCommand cmd) throws IOException, InterruptedException
@@ -283,20 +251,9 @@ abstract public class Sneakermesh implements Logger
 			cmd.msg.save(texts);
 		}
 
-		synchronized(want)
-		{
-			want.remove(cmd.digest);
-			log("now want: "+want.size());
-			queue.put(new WantCommand(new HashSet<String>(want)));
-		}
-
-		synchronized(have)
-		{
-			have.add(cmd.digest);
-			log("now have: "+have.size());
-			queue.put(new HaveCommand(new HashSet<String>(have)));
-			fireHaveChangeEvent(cmd.digest);
-		}
+		db.deletePeerWant(cmd.peer, cmd.digest);
+		db.putHave(cmd.peer, cmd.digest);
+		fireHaveChangeEvent(cmd.digest);		
 	}
 	
 	public void fireHaveChangeEvent(String digest)
@@ -312,22 +269,13 @@ abstract public class Sneakermesh implements Logger
 	
 	public void addMessage(Message msg) throws IOException
 	{
+		log("addMessage: "+msg);
 		String digest=msg.digest;
 		msg.save(texts);
-		
-		synchronized(have)
-		{
-			have.add(digest);
-			fireHaveChangeEvent(digest);
-			synchronized(queue)
-			{
-				try {
-					queue.put(new HaveCommand(have));
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
+
+		db.putHave("127.0.0.1", digest);
+		log("now have: "+db.getHave("127.0.0.1"));
+		fireHaveChangeEvent(digest);
 	}
 	
 	public static String asHex(byte buf[])
@@ -382,7 +330,6 @@ abstract public class Sneakermesh implements Logger
 				read=is.read(buff, 0, toread);
 			}
 		} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
 	}
@@ -390,36 +337,36 @@ abstract public class Sneakermesh implements Logger
 	public List<Message> getMessages()
 	{
 		List<Message> msgs=new ArrayList<Message>();
-		
-		synchronized(have)
+
+		List<String> have=db.getHave("127.0.0.1");
+		log("messages I have: "+have);
+		for(String digest : have)
 		{
-			for(String digest : have)
+			File file=new File(texts, digest);
+			long size=file.length();
+			if(file.exists() && size>0)
 			{
-				File file=new File(texts, digest);
-				long size=file.length();
-				if(file.exists() && size>0)
+				try
 				{
-					try
-					{
-						TextMessage msg=(TextMessage)Message.readMessage(file);
-						msgs.add(msg);
-					}
-					catch(Exception e)
-					{
-						e.printStackTrace();
-					}
+					TextMessage msg=(TextMessage)Message.readMessage(file);
+					msgs.add(msg);
 				}
-				else
+				catch(Exception e)
 				{
-					log("Bad file: "+file);
+					e.printStackTrace();
 				}
+			}
+			else
+			{
+				log("Bad file: "+file);
 			}
 		}
 				
 		return msgs;
 	}
 
-	public void deleteMessages() {
+	public void deleteMessages()
+	{
 		if(texts==null)
 		{
 			log("No texts to delete...");
@@ -437,9 +384,6 @@ abstract public class Sneakermesh implements Logger
 			f.delete();
 		}		
 		
-		synchronized(have)
-		{
-			have.clear();
-		}		
+		db.deleteHave("127.0.0.1");
 	}		
 }

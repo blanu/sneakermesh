@@ -9,11 +9,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Formatter;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -49,7 +55,7 @@ public class Util
 		return new String(digest);
 	}    
 
-	static protected byte[] fillBuffer(InputStream is, int size)
+	static public byte[] fillBuffer(InputStream is, int size)
 	{
 		byte[] digest=new byte[size];
 		int offset=0;
@@ -233,4 +239,26 @@ public class Util
 
 		return buffer.toString();
 	}	
+	
+    static public List<String> getLocalIpAddresses() {
+    	List<String>addrs=new ArrayList<String>();
+    	
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && !inetAddress.getHostAddress().contains(":")) {
+                    	addrs.add(inetAddress.getHostAddress().toString());
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            log(ex.toString());
+            return null;
+        }
+
+        System.out.println("addrs: "+addrs);
+        return addrs;
+    }	
 }

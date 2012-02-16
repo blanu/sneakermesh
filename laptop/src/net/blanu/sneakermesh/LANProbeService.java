@@ -1,5 +1,7 @@
 package net.blanu.sneakermesh;
 
+import net.blanu.sneakermesh.udp.SyncServer;
+
 public class LANProbeService implements Logger
 {
 	private static final String TAG = "LANProbeService";	
